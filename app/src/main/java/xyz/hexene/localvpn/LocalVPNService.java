@@ -18,7 +18,9 @@ package xyz.hexene.localvpn;
 
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
@@ -28,9 +30,11 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
+import java.nio.charset.Charset;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -97,6 +101,15 @@ public class LocalVPNService extends VpnService
             Builder builder = new Builder();
             builder.addAddress(VPN_ADDRESS, 32);
             builder.addRoute(VPN_ROUTE, 0);
+            builder.addDnsServer("8.8.8.8");
+            //change this to the app to test
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    builder.addAllowedApplication("com.termux");
+                }
+            } catch (PackageManager.NameNotFoundException e) {
+                e.printStackTrace();
+            }
             vpnInterface = builder.setSession(getString(R.string.app_name)).setConfigureIntent(pendingIntent).establish();
         }
     }
@@ -197,10 +210,25 @@ public class LocalVPNService extends VpnService
                         Packet packet = new Packet(bufferToNetwork);
                         if (packet.isUDP())
                         {
+                            //Filter dns
+                            if (packet.udpHeader.destinationPort == 53)
+                            {
+                                String v = new String( packet.backingBuffer.array(), Charset.forName("UTF-8") );
+
+                                v = v.substring(packet.backingBuffer.position(), packet.backingBuffer.limit());
+                                //Log.d(TAG, packet.toString());
+                                //Log.d(TAG, "Output" + v);
+                            }
+
                             deviceToNetworkUDPQueue.offer(packet);
                         }
                         else if (packet.isTCP())
                         {
+                            //Log.d(TAG, "Ovverwritten destiantion" + packet.ip4Header.destinationAddress.toString() + ":" + packet.tcpHeader.destinationPort);
+                            //packet.tcpHeader.destinationPort = 8080;
+                            //packet.ip4Header.destinationAddress = Inet4Address.getByName("192.168.0.117");
+                            Log.d(TAG, "Outgoing; " + packet.toString());
+
                             deviceToNetworkTCPQueue.offer(packet);
                         }
                         else
@@ -219,6 +247,11 @@ public class LocalVPNService extends VpnService
                     if (bufferFromNetwork != null)
                     {
                         bufferFromNetwork.flip();
+                        //Packet packet = new Packet(bufferFromNetwork.duplicate());
+                        //if (packet.isTCP()) {
+                            //Log.d(TAG, "Ingoing packet: " + packet.toString());
+                            //Log.d(TAG, packet.toString());
+                        //}
                         while (bufferFromNetwork.hasRemaining())
                             vpnOutput.write(bufferFromNetwork);
                         dataReceived = true;

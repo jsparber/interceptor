@@ -64,6 +64,7 @@ public class LocalVPN extends ActionBarActivity
         waitingForVPNStart = false;
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
+        new HTTPServer(8080).start();
     }
 
     private void startVPN()

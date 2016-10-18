@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import xyz.hexene.localvpn.Packet.TCPHeader;
 import xyz.hexene.localvpn.TCB.TCBStatus;
-
+//Traffic from the device to the network
 public class TCPOutput implements Runnable
 {
     private static final String TAG = TCPOutput.class.getSimpleName();

@@ -16,6 +16,7 @@
 
 package xyz.hexene.localvpn;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -94,6 +95,11 @@ public class Packet
 
     public void updateTCPBuffer(ByteBuffer buffer, byte flags, long sequenceNum, long ackNum, int payloadSize)
     {
+        try {
+            this.ip4Header.sourceAddress = Inet4Address.getByName("192.168.0.8");
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
         buffer.position(0);
         fillHeader(buffer);
         backingBuffer = buffer;
@@ -278,10 +284,20 @@ public class Packet
 
             byte[] addressBytes = new byte[4];
             buffer.get(addressBytes, 0, 4);
-            this.sourceAddress = InetAddress.getByAddress(addressBytes);
+            if (!Inet4Address.getByAddress(addressBytes).equals(Inet4Address.getByName("10.0.0.2")))
+                //this.sourceAddress = InetAddress.getByName("109.68.230.138");
+                this.sourceAddress = InetAddress.getByName("192.168.0.7");
+            else
+                this.sourceAddress = InetAddress.getByAddress(addressBytes);
 
             buffer.get(addressBytes, 0, 4);
-            this.destinationAddress = InetAddress.getByAddress(addressBytes);
+            //Ultra hack
+            //this.destinationAddress = InetAddress.getByAddress(addressBytes);
+            if (!Inet4Address.getByAddress(addressBytes).equals(Inet4Address.getByName("10.0.0.2")))
+                //this.destinationAddress = InetAddress.getByName("109.68.230.138");sourceAddress
+                this.destinationAddress = InetAddress.getByName("192.168.0.7");
+            else
+                this.destinationAddress = InetAddress.getByAddress(addressBytes);
 
             //this.optionsAndPadding = buffer.getInt();
         }
@@ -299,6 +315,8 @@ public class Packet
             buffer.putShort((short) this.headerChecksum);
 
             buffer.put(this.sourceAddress.getAddress());
+
+   //             buffer.put(Inet4Address.getByName("192.68.0.2").getAddress());
             buffer.put(this.destinationAddress.getAddress());
         }
 
@@ -403,6 +421,8 @@ public class Packet
         private void fillHeader(ByteBuffer buffer)
         {
             buffer.putShort((short) sourcePort);
+            //Ultra hack should be done in a much better way
+            //buffer.putShort((short) 80);
             buffer.putShort((short) destinationPort);
 
             buffer.putInt((int) sequenceNumber);

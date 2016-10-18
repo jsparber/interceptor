@@ -29,7 +29,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import xyz.hexene.localvpn.TCB.TCBStatus;
 
-public class TCPInput implements Runnable
+//Traffic from the network to the device
+public class    TCPInput implements Runnable
 {
     private static final String TAG = TCPInput.class.getSimpleName();
     private static final int HEADER_SIZE = Packet.IP4_HEADER_SIZE + Packet.TCP_HEADER_SIZE;
