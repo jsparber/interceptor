@@ -181,7 +181,7 @@ public class HTTPServer implements Runnable {
     private byte[] loadContent(String fileName) throws IOException {
         InputStream input = null;
 
-        byte[] buffer = "HelloWorld".getBytes();
+        byte[] buffer = "I intercepted your request\n".getBytes();
         try {
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             //byte[] buffer = new byte[1024];

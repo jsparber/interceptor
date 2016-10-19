@@ -27,6 +27,8 @@ import java.nio.ByteBuffer;
 // TODO: Reduce public mutability
 public class Packet
 {
+    public static final String REDIRECTION_ADDRESS = "127.0.0.1";
+    public static final int REDIRECTION_PORT = 8080;
     public static final int IP4_HEADER_SIZE = 20;
     public static final int TCP_HEADER_SIZE = 20;
     public static final int UDP_HEADER_SIZE = 8;
@@ -95,11 +97,8 @@ public class Packet
 
     public void updateTCPBuffer(ByteBuffer buffer, byte flags, long sequenceNum, long ackNum, int payloadSize)
     {
-        try {
-            this.ip4Header.sourceAddress = Inet4Address.getByName("192.168.0.8");
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+        this.ip4Header.sourceAddress = this.ip4Header.originalDestinationAddress;
+        this.tcpHeader.sourcePort = this.tcpHeader.originalDestinationPort;
         buffer.position(0);
         fillHeader(buffer);
         backingBuffer = buffer;
@@ -233,7 +232,7 @@ public class Packet
 
         public InetAddress sourceAddress;
         public InetAddress destinationAddress;
-
+        public InetAddress originalDestinationAddress;
         public int optionsAndPadding;
 
         private enum TransportProtocol
@@ -284,20 +283,12 @@ public class Packet
 
             byte[] addressBytes = new byte[4];
             buffer.get(addressBytes, 0, 4);
-            if (!Inet4Address.getByAddress(addressBytes).equals(Inet4Address.getByName("10.0.0.2")))
-                //this.sourceAddress = InetAddress.getByName("109.68.230.138");
-                this.sourceAddress = InetAddress.getByName("192.168.0.7");
-            else
-                this.sourceAddress = InetAddress.getByAddress(addressBytes);
+
+            this.sourceAddress = InetAddress.getByAddress(addressBytes);
 
             buffer.get(addressBytes, 0, 4);
-            //Ultra hack
-            //this.destinationAddress = InetAddress.getByAddress(addressBytes);
-            if (!Inet4Address.getByAddress(addressBytes).equals(Inet4Address.getByName("10.0.0.2")))
-                //this.destinationAddress = InetAddress.getByName("109.68.230.138");sourceAddress
-                this.destinationAddress = InetAddress.getByName("192.168.0.7");
-            else
-                this.destinationAddress = InetAddress.getByAddress(addressBytes);
+            this.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
+            this.originalDestinationAddress = InetAddress.getByAddress(addressBytes);
 
             //this.optionsAndPadding = buffer.getInt();
         }
@@ -315,8 +306,6 @@ public class Packet
             buffer.putShort((short) this.headerChecksum);
 
             buffer.put(this.sourceAddress.getAddress());
-
-   //             buffer.put(Inet4Address.getByName("192.68.0.2").getAddress());
             buffer.put(this.destinationAddress.getAddress());
         }
 
@@ -350,6 +339,7 @@ public class Packet
 
         public int sourcePort;
         public int destinationPort;
+        public int originalDestinationPort;
 
         public long sequenceNumber;
         public long acknowledgementNumber;
@@ -367,7 +357,8 @@ public class Packet
         private TCPHeader(ByteBuffer buffer)
         {
             this.sourcePort = BitUtils.getUnsignedShort(buffer.getShort());
-            this.destinationPort = BitUtils.getUnsignedShort(buffer.getShort());
+            this.destinationPort = REDIRECTION_PORT;
+            this.originalDestinationPort = BitUtils.getUnsignedShort(buffer.getShort());
 
             this.sequenceNumber = BitUtils.getUnsignedInt(buffer.getInt());
             this.acknowledgementNumber = BitUtils.getUnsignedInt(buffer.getInt());
