@@ -16,9 +16,16 @@
 
 package xyz.hexene.localvpn;
 
+import android.content.Context;
+import android.content.Intent;
 import android.content.res.AssetManager;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.TextView;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -38,7 +45,9 @@ import java.net.SocketException;
  */
 public class HTTPServer implements Runnable {
 
+    public static final String BROADCAST_HTTP_LOG = "xyz.hexene.localvpn.HTTP_SERVER";
     private static final String TAG = "HTTPServer";
+    private Handler mHandler;
 
     /**
      * The port number we listen to
@@ -59,8 +68,9 @@ public class HTTPServer implements Runnable {
     /**
      * WebServer constructor.
      */
-    public HTTPServer(int port) {
+    public HTTPServer(int port, Handler mHandler) {
         mPort = port;
+        this.mHandler = mHandler;
     }
 
     /**
@@ -111,9 +121,10 @@ public class HTTPServer implements Runnable {
     private void handle(Socket socket) throws IOException {
         BufferedReader reader = null;
         PrintStream output = null;
+        sendLog("\nNew request:\n");
         try {
             String route = null;
-
+            String host = null;
             // Read HTTP headers and parse out the route.
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String line;
@@ -122,31 +133,26 @@ public class HTTPServer implements Runnable {
                     int start = line.indexOf('/') + 1;
                     int end = line.indexOf(' ', start);
                     route = line.substring(start, end);
-                    break;
+                    //break;
+                }
+                if (line.startsWith("Host")) {
+                    int start = line.indexOf(' ') + 1;
+                    int end = line.indexOf(' ', start);
+                    host = line.substring(start);
+                    //break;
                 }
                 Log.d(TAG, line);
+                sendLog("   " + line + "\n");
             }
-            Log.d(TAG, "Got request");
-            if (route != null) {
-                Log.d(TAG, route);
-            }
+
             // Output stream that we send the response to
             output = new PrintStream(socket.getOutputStream());
 
-            // Prepare the content to send.
-            if (null == route) {
-                writeServerError(output);
-                return;
-            }
-            byte[] bytes = loadContent(route);
-            if (null == bytes) {
-                writeServerError(output);
-                return;
-            }
+            byte[] bytes = "I intercepted your request\n".getBytes();
 
             // Send out the content.
             output.println("HTTP/1.0 200 OK");
-            output.println("Content-Type: " + detectMimeType(route));
+            output.println("Content-Type: " + "text/html");
             output.println("Content-Length: " + bytes.length);
             output.println();
             output.write(bytes);
@@ -161,62 +167,10 @@ public class HTTPServer implements Runnable {
         }
     }
 
-    /**
-     * Writes a server error response (HTTP/1.0 500) to the given output stream.
-     *
-     * @param output The output stream.
-     */
-    private void writeServerError(PrintStream output) {
-        output.println("HTTP/1.0 500 Internal Server Error");
-        output.flush();
+    private void sendLog(String output) {
+        Log.d(TAG, output);
+        Message msg = Message.obtain();
+        msg.obj = output;// Some Arbitrary object
+        this.mHandler.sendMessage(msg);
     }
-
-    /**
-     * Loads all the content of {@code fileName}.
-     *
-     * @param fileName The name of the file.
-     * @return The content of the file.
-     * @throws IOException
-     */
-    private byte[] loadContent(String fileName) throws IOException {
-        InputStream input = null;
-
-        byte[] buffer = "I intercepted your request\n".getBytes();
-        try {
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            //byte[] buffer = new byte[1024];
-            //int size;
-            //while (-1 != (size = input.read(buffer))) {
-                //output.write(buffer, 0, size);
-            output.write(buffer);
-            //}
-            output.flush();
-            return output.toByteArray();
-        } finally {
-            if (null != input) {
-                input.close();
-            }
-        }
-    }
-
-    /**
-     * Detects the MIME type from the {@code fileName}.
-     *
-     * @param fileName The name of the file.
-     * @return A MIME type.
-     */
-    private String detectMimeType(String fileName) {
-        if (TextUtils.isEmpty(fileName)) {
-            return null;
-        } else if (fileName.endsWith(".html")) {
-            return "text/html";
-        } else if (fileName.endsWith(".js")) {
-            return "application/javascript";
-        } else if (fileName.endsWith(".css")) {
-            return "text/css";
-        } else {
-            return "application/octet-stream";
-        }
-    }
-
 }
