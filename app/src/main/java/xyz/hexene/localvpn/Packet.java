@@ -29,6 +29,7 @@ public class Packet
 {
     public static final String REDIRECTION_ADDRESS = "127.0.0.1";
     public static final int REDIRECTION_PORT = 8080;
+
     public static final int IP4_HEADER_SIZE = 20;
     public static final int TCP_HEADER_SIZE = 20;
     public static final int UDP_HEADER_SIZE = 8;
@@ -46,6 +47,8 @@ public class Packet
         if (this.ip4Header.protocol == IP4Header.TransportProtocol.TCP) {
             this.tcpHeader = new TCPHeader(buffer);
             this.isTCP = true;
+            this.ip4Header.originalDestinationAddress = this.ip4Header.destinationAddress;
+            this.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
         } else if (ip4Header.protocol == IP4Header.TransportProtocol.UDP) {
             this.udpHeader = new UDPHeader(buffer);
             this.isUDP = true;
@@ -97,6 +100,7 @@ public class Packet
 
     public void updateTCPBuffer(ByteBuffer buffer, byte flags, long sequenceNum, long ackNum, int payloadSize)
     {
+        //reset the sourceAddress:Port to the original ones and complite te redirection
         this.ip4Header.sourceAddress = this.ip4Header.originalDestinationAddress;
         this.tcpHeader.sourcePort = this.tcpHeader.originalDestinationPort;
         buffer.position(0);
@@ -287,8 +291,7 @@ public class Packet
             this.sourceAddress = InetAddress.getByAddress(addressBytes);
 
             buffer.get(addressBytes, 0, 4);
-            this.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
-            this.originalDestinationAddress = InetAddress.getByAddress(addressBytes);
+            this.destinationAddress = InetAddress.getByAddress(addressBytes);
 
             //this.optionsAndPadding = buffer.getInt();
         }
