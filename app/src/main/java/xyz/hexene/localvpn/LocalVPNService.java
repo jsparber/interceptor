@@ -32,10 +32,13 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
 import java.nio.charset.Charset;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +47,8 @@ public class LocalVPNService extends VpnService {
     private static final String TAG = LocalVPNService.class.getSimpleName();
     private static final String VPN_ADDRESS = "10.0.0.2"; // Only IPv4 support for now
     private static final String VPN_ROUTE = "0.0.0.0"; // Intercept everything
+    private static final String REDIRECTION_ADDRESS = "127.0.0.1";
+    private static String APP_TO_TEST = null;
 
     public static final String BROADCAST_VPN_STATE = "xyz.hexene.localvpn.VPN_STATE";
 
@@ -64,6 +69,9 @@ public class LocalVPNService extends VpnService {
     @Override
     public void onCreate() {
         super.onCreate();
+    }
+
+    public void startVPN() {
         isRunning = true;
         setupVPN();
         try {
@@ -99,7 +107,7 @@ public class LocalVPNService extends VpnService {
             //change this to the app to test
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    builder.addAllowedApplication("com.termux");
+                    builder.addAllowedApplication(APP_TO_TEST);
                 }
             } catch (PackageManager.NameNotFoundException e) {
                 e.printStackTrace();
@@ -111,9 +119,14 @@ public class LocalVPNService extends VpnService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String cmd = intent.getStringExtra("cmd");
+        String testApp = intent.getStringExtra("testApp");
         if (cmd != null && cmd.contains("stop")) {
-            onDestroy();
+            stopVPN();
             stopService(new Intent(this, LocalVPNService.class));
+        }
+        else if (testApp != null) {
+            APP_TO_TEST = testApp;
+            startVPN();
         }
         return START_STICKY;
     }
@@ -181,6 +194,7 @@ public class LocalVPNService extends VpnService {
 
             FileChannel vpnInput = new FileInputStream(vpnFileDescriptor).getChannel();
             FileChannel vpnOutput = new FileOutputStream(vpnFileDescriptor).getChannel();
+            HashMap<Integer, Integer> proxyPorts = new HashMap<Integer, Integer>();
 
             try {
                 ByteBuffer bufferToNetwork = null;
@@ -200,15 +214,31 @@ public class LocalVPNService extends VpnService {
                         Packet packet = new Packet(bufferToNetwork);
                         if (packet.isUDP()) {
                             //Filter dns
-                            if (packet.udpHeader.destinationPort == 53) {
-                                String v = new String(packet.backingBuffer.array(), Charset.forName("UTF-8"));
-                                v = v.substring(packet.backingBuffer.position(), packet.backingBuffer.limit());
-                                //Log.d(TAG, packet.toString());
-                                //Log.d(TAG, "Output" + v);
-                            }
+                            //if (packet.udpHeader.destinationPort == 53) {
+                            //String v = new String(packet.backingBuffer.array(), Charset.forName("UTF-8"));
+                            //v = v.substring(packet.backingBuffer.position(), packet.backingBuffer.limit());
+                            //Log.d(TAG, packet.toString());
+                            //Log.d(TAG, "Output" + v);
+                            //}
 
                             deviceToNetworkUDPQueue.offer(packet);
                         } else if (packet.isTCP()) {
+                            packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
+                            packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
+                            Log.d(TAG, "Used source port: " + packet.tcpHeader.sourcePort);
+
+                            if (proxyPorts.get(packet.tcpHeader.sourcePort) == null) {
+                                HTTPServer server = new HTTPServer(0, packet.ip4Header.destinationAddress, packet.tcpHeader.destinationPort,
+                                        proxyPorts, packet.tcpHeader.sourcePort
+                                        );
+                                server.start();
+                                proxyPorts.put(packet.tcpHeader.sourcePort, server.getPort());
+                            }
+                                packet.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
+
+                            //Set destination port in base of the sourcePort
+                            packet.tcpHeader.destinationPort = proxyPorts.get(packet.tcpHeader.sourcePort);
+
                             deviceToNetworkTCPQueue.offer(packet);
                         } else {
                             Log.w(TAG, "Unknown packet type");

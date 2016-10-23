@@ -16,6 +16,8 @@
 
 package xyz.hexene.localvpn;
 
+import android.util.Log;
+
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -27,8 +29,6 @@ import java.nio.ByteBuffer;
 // TODO: Reduce public mutability
 public class Packet
 {
-    public static final String REDIRECTION_ADDRESS = "127.0.0.1";
-    public static final int REDIRECTION_PORT = 8080;
 
     public static final int IP4_HEADER_SIZE = 20;
     public static final int TCP_HEADER_SIZE = 20;
@@ -47,8 +47,6 @@ public class Packet
         if (this.ip4Header.protocol == IP4Header.TransportProtocol.TCP) {
             this.tcpHeader = new TCPHeader(buffer);
             this.isTCP = true;
-            this.ip4Header.originalDestinationAddress = this.ip4Header.destinationAddress;
-            this.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
         } else if (ip4Header.protocol == IP4Header.TransportProtocol.UDP) {
             this.udpHeader = new UDPHeader(buffer);
             this.isUDP = true;
@@ -360,8 +358,7 @@ public class Packet
         private TCPHeader(ByteBuffer buffer)
         {
             this.sourcePort = BitUtils.getUnsignedShort(buffer.getShort());
-            this.destinationPort = REDIRECTION_PORT;
-            this.originalDestinationPort = BitUtils.getUnsignedShort(buffer.getShort());
+            this.destinationPort = BitUtils.getUnsignedShort(buffer.getShort());
 
             this.sequenceNumber = BitUtils.getUnsignedInt(buffer.getInt());
             this.acknowledgementNumber = BitUtils.getUnsignedInt(buffer.getInt());

@@ -31,6 +31,9 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 
 public class LocalVPN extends AppCompatActivity {
     private static final int VPN_REQUEST_CODE = 0x0F;
@@ -67,23 +70,29 @@ public class LocalVPN extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
 
+        final TextView logOutput = (TextView) findViewById(R.id.logOutput);
+        new LoggerOutput(mHandler);
     }
 
     public void buttonOnClick(View v) {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
+
+ //           HTTPServer server = null;
+                //server = new HTTPServer(8080, InetAddress.getByName("109.68.230.138"), 80);
+//            server.start();
             //should be a service instate of a thread
-            server = new HTTPServer(8080, mHandler);
-            server.start();
+            //server = new HTTPServer(8080, mHandler);
+            //server.start();
         } else {
             stopVPN();
-            server.stop();
+            //server.stop();
         }
     }
 
     private void startVPN() {
-        TextView logOutput = (TextView) findViewById(R.id.logOutput);
-        logOutput.setText("VPN  Started...");
+        //LoggerOutput.clear();
+        LoggerOutput.println("VPN  Started...");
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
@@ -92,11 +101,15 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void stopVPN() {
+        LoggerOutput.clear();
+        final TextView logOutput = (TextView) findViewById(R.id.logOutput);
+        logOutput.setText("");
         Intent stopIntent = new Intent(this, LocalVPNService.class);
         stopIntent.putExtra("cmd", "stop");
         startService(stopIntent);
         //stopService(new Intent(this, LocalVPNService.class));
         changeButton();
+        LoggerOutput.println("VPN  stopped");
     }
 
     @Override
@@ -104,7 +117,10 @@ public class LocalVPN extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
             waitingForVPNStart = true;
-            startService(new Intent(this, LocalVPNService.class));
+
+            Intent startIntent = new Intent(this, LocalVPNService.class);
+            startIntent.putExtra("testApp", "com.termux");
+            startService(startIntent);
             changeButton();
         }
     }
@@ -117,7 +133,6 @@ public class LocalVPN extends AppCompatActivity {
 
     private void updateLog(String log) {
         final TextView logOutput = (TextView) findViewById(R.id.logOutput);
-        Log.d("TAG", "ID: " + R.id.logOutput);
         logOutput.setText(logOutput.getText() + log);
     }
 

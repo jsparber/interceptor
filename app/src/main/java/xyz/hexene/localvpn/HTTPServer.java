@@ -21,19 +21,25 @@ import android.os.Message;
 import android.support.v4.content.res.TypedArrayUtils;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.StringBuilderPrinter;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -48,18 +54,15 @@ public class HTTPServer implements Runnable {
 
     public static final String BROADCAST_HTTP_LOG = "xyz.hexene.localvpn.HTTP_SERVER";
     private static final String TAG = "HTTPServer";
-    private Handler mHandler;
+    public InetAddress originalDestinationAddress = null;
+    public int originalDestinationPort = 0;
+    private HashMap<Integer, Integer> proxyPorts = null;
+    private int elementToremove;
 
     /**
      * The port number we listen to
      */
     private final int mPort;
-
-
-    /**
-     * True if the server is running.
-     */
-    private boolean mIsRunning;
 
     /**
      * The {@link java.net.ServerSocket} that we listen to.
@@ -69,25 +72,36 @@ public class HTTPServer implements Runnable {
     /**
      * WebServer constructor.
      */
-    public HTTPServer(int port, Handler mHandler) {
+    public HTTPServer(int port, InetAddress orgDestAddr, int origPort, HashMap<Integer, Integer> proxyPorts, int sourcePort) {
         mPort = port;
-        this.mHandler = mHandler;
+        this.proxyPorts = proxyPorts;
+        this.elementToremove = sourcePort;
+        this.originalDestinationAddress = orgDestAddr;
+        this.originalDestinationPort = origPort;
+
+        try {
+            mServerSocket = new ServerSocket(mPort);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * This method starts the web server listening to the specified port.
      */
-    public void start() {
-        mIsRunning = true;
-        new Thread(this).start();
+    public Thread start() {
+        Thread thread = new Thread(this);
+        thread.start();
+        return thread;
     }
+
 
     /**
      * This method stops the web server
      */
     public void stop() {
         try {
-            mIsRunning = false;
+            proxyPorts.remove(elementToremove);
             if (null != mServerSocket) {
                 mServerSocket.close();
                 mServerSocket = null;
@@ -97,39 +111,74 @@ public class HTTPServer implements Runnable {
         }
     }
 
+    public int getPort() {
+        return this.mServerSocket.getLocalPort();
+    }
+
     @Override
     public void run() {
         try {
-            mServerSocket = new ServerSocket(mPort);
-            while (mIsRunning) {
-                Socket socket = mServerSocket.accept();
-                handle(socket);
-                socket.close();
-            }
-        } catch (SocketException e) {
-            // The server was stopped; ignore.
+            Socket socket = mServerSocket.accept();
+            handle(socket);
         } catch (IOException e) {
+            Log.d(TAG, "ERROR");
             Log.e(TAG, "Web server error.", e);
             Log.e(TAG, e.toString());
         }
+        Log.d(TAG, "Channel closed");
+        stop();
     }
 
     /**
      * Respond to a request from a client.
      *
-     * @param socket The client socket.
+     * @param clientSocket The client socket.
      * @throws IOException
      */
-    private void handle(Socket socket) throws IOException {
+    private void handle(Socket clientSocket) throws IOException {
         BufferedReader reader = null;
-        //PrintStream output = null;
-        OutputStream output = null;
-        Map<String, String> requestHeader = new HashMap<String, String>();
+        OutputStream outputClient = null;
+        InputStream inputClient = null;
+        OutputStream outputServer = null;
+        InputStream inputServer = null;
+        Socket serverSocket = null;
+
+        serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
+        //Map<String, String> requestHeader = new HashMap<String, String>();
+
         sendLog("\nNew request:\n");
+
+
+        outputClient = clientSocket.getOutputStream();
+        inputClient = clientSocket.getInputStream();
+        outputServer = serverSocket.getOutputStream();
+        inputServer = serverSocket.getInputStream();
+
+        Thread oneWay = pipe(inputClient, outputServer);
+        Thread otherWay = pipe(inputServer, outputClient);
+
+
+        sendLog("\nRequest headers: \n");
+        oneWay.start();
+
+
+        sendLog("\nResposne headers: \n");
+
+        otherWay.start();
+        //wait for the pipes to finish
         try {
-            String route = null;
-            String host = null;
-            // Read HTTP headers and parse out the route.
+            oneWay.join();
+            otherWay.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            serverSocket.close();
+            clientSocket.close();
+        }
+
+    }
+
+            /*
             reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             String line;
             while (!TextUtils.isEmpty(line = reader.readLine())) {
@@ -147,22 +196,10 @@ public class HTTPServer implements Runnable {
                 Log.d(TAG, line);
                 sendLog("   " + line + "\n");
             }
-            output = socket.getOutputStream();
-            URL url = new URL("http://" + requestHeader.get("Host") + "/" + route);
-            HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
-            urlConnection.setInstanceFollowRedirects(false);
-            HttpURLConnection.setFollowRedirects(false);
 
-            //urlConnection.setInstanceFollowRedirects(false);
             for (Map.Entry<String,String> entry : requestHeader.entrySet()) {
                 urlConnection.setRequestProperty(entry.getKey(), entry.getValue());
             }
-            //urlConnection.connect();
-            try {
-
-                //Write header
-                Map<String, List<String> > header = urlConnection.getHeaderFields();
-
                 for (Map.Entry<String, List<String>> entry : header.entrySet()) {
 
                     String key = (entry.getKey() == null) ? "" : (entry.getKey() + ": ");
@@ -172,62 +209,69 @@ public class HTTPServer implements Runnable {
                         output.write((key + entry.getValue().get(0) + "\r\n").getBytes());
                 }
 
-                if (header.get("Content-Length") == null && header.get("Transfer-Encoding") == null)
-                    output.write(("Transfer-Encoding: chunked\r\n").getBytes());
-                //Add a empty line to separate header from content
+    }
+    */
 
-                output.write("\r\n".getBytes());
 
-                InputStream in = new BufferedInputStream(urlConnection.getInputStream());
-                    byte[] buffer = new byte[1024];
-                    int len = in.read(buffer);
-                    while (len != -1) {
-                        if (header.get("Content-Length") == null)
-                            output.write((Integer.toHexString(len).toUpperCase() + "\r\n").getBytes());
-                        output.write(buffer, 0, len);
-                        if (header.get("Content-Length") == null)
-                            output.write("\r\n".getBytes());
+    //maby should use pipedInputStream and pipedOutputStream
+    private Thread pipe(final InputStream in, final OutputStream out) {
+        final byte[] buffer = new byte[16384];
+        Thread runner = new Thread(new Runnable() {
+            public void run() {
+                Log.d(TAG, "Start pipe");
+                int len = 0;
+                try {
+                    len = in.read(buffer);
+                } catch (IOException e) {
+                    //e.printStackTrace();
+                }
+                try {
+                    while (out != null && in != null) {
+                        logTraffic(buffer);
+                        out.write(buffer, 0, len);
                         len = in.read(buffer);
+                    }
+
+                } catch (IOException e) {
+                    //e.printStackTrace();
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    //output conection is closed
+                    //e.printStackTrace();
+                } finally {
+                    try {
+                        in.close();
+                        out.close();
+                    } catch (IOException e) {
+                        //e.printStackTrace();
+                    }
+
                 }
-
-                if (header.get("Content-Length") == null) {
-                    output.write("0\r\n".getBytes());
-                    output.write("\r\n".getBytes());
-                }
-            } finally {
-                urlConnection.disconnect();
             }
+        });
+        return runner;
+    }
 
-
-            // Output stream that we send the response to
-            //output = socket.getOutputStream();
-            //output = new PrintStream(socket.getOutputStream());
-
-            //byte[] bytes = "I intercepted your request\n".getBytes();
-
-            // Send out the content.
-            /*output.println("HTTP/1.0 200 OK");
-            output.println("Content-Type: " + "text/html");
-            output.println("Content-Length: " + bytes.length);
-            output.println();
-            */
-
-            //output.write(bytes);
-            output.flush();
-        } finally {
-            if (null != output) {
-                output.close();
+    private void logTraffic(byte[] buffer) {
+        BufferedReader bfReader = null;
+        String line = null;
+        bfReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buffer)));
+        try {
+            String temp = null;
+            while ((line = bfReader.readLine()) != null) {
+                if (!TextUtils.isEmpty(line))
+                    sendLog(line);
             }
-            if (null != reader) {
-                reader.close();
-            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
     }
 
     private void sendLog(String output) {
         Log.d(TAG, output);
-        Message msg = Message.obtain();
-        msg.obj = output;// Some Arbitrary object
-        this.mHandler.sendMessage(msg);
+        //Message msg = Message.obtain();
+        LoggerOutput.println(output);
+        //msg.obj = output;// Some Arbitrary object
+        //this.mHandler.sendMessage(msg);
     }
 }
