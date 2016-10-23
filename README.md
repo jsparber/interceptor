@@ -1,6 +1,9 @@
-# LocalVPN
+# vpnMITM
 A packet interceptor for Android built on top of VpnService
 
-License: Apache v2.0
+Original Progject License
+Apache v2.0
+My added code is Licensed under
+GPLv3
 
-Early alpha, will eat your cat!
+This Project is a work in progress it will contain ugly hacks, grammer and spelling mistakes.
