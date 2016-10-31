@@ -1,5 +1,7 @@
 package xyz.hexene.localvpn;
 
+import android.content.Context;
+import android.content.res.AssetManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -12,7 +14,24 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLServerSocket;
+import javax.net.ssl.SSLServerSocketFactory;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.TrustManagerFactory;
 
 public class HTTPServer implements Runnable {
 
@@ -26,7 +45,7 @@ public class HTTPServer implements Runnable {
     /**
      * The {@link java.net.ServerSocket} that we listen to.
      */
-    private ServerSocket mServerSocket;
+    private SSLServerSocket mServerSocket;
 
     /**
      * WebServer constructor.
@@ -36,13 +55,57 @@ public class HTTPServer implements Runnable {
         this.elementToremove = sourcePort;
         this.originalDestinationAddress = orgDestAddr;
         this.originalDestinationPort = origPort;
+        mServerSocket = createSSLServer(LocalVPN.getAppContext(), port);
+        //for non ssl traffic
+        //mServerSocket = new ServerSocket(port);
+    }
 
+    public SSLServerSocket createSSLServer(Context myContext, int port) {
+        SSLServerSocket res = null;
+        AssetManager mngr = myContext.getAssets();
+        InputStream keyfile = null;
         try {
-            mServerSocket = new ServerSocket(port);
+            keyfile = mngr.open("keystore.bks");
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        char keystorepass[] = "password".toCharArray();
+        char keypassword[] = "password".toCharArray();
+
+        try{
+            String keyStoreType = KeyStore.getDefaultType();
+            KeyStore keyStore = KeyStore.getInstance(keyStoreType);
+
+            keyStore.load(keyfile, keystorepass);
+
+            String keyalg=KeyManagerFactory.getDefaultAlgorithm();
+            KeyManagerFactory kmf=KeyManagerFactory.getInstance(keyalg);
+
+            kmf.init(keyStore, keypassword);
+            KeyManager[] km = kmf.getKeyManagers();
+
+            SSLServerSocketFactory ssf = null;
+            try {
+                TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                trustManagerFactory.init(keyStore);
+                SSLContext ctx = SSLContext.getInstance("TLS");
+                ctx.init(km, trustManagerFactory.getTrustManagers(), null);
+                ssf = ctx.getServerSocketFactory();
+            } catch (Exception e) {
+                throw new IOException(e.getMessage());
+            }
+            res = (SSLServerSocket)ssf.createServerSocket(port);
+            res.setEnabledProtocols(res.getSupportedProtocols());
+            res.setEnabledCipherSuites(res.getSupportedCipherSuites());
+            return res;
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return null;
     }
+
 
     /**
      * This method starts the web server listening to the specified port.
@@ -59,7 +122,8 @@ public class HTTPServer implements Runnable {
      */
     public void stop() {
         try {
-            proxyPorts.remove(elementToremove);
+            if (proxyPorts != null)
+                proxyPorts.remove(elementToremove);
             if (null != mServerSocket) {
                 mServerSocket.close();
                 mServerSocket = null;
@@ -76,7 +140,8 @@ public class HTTPServer implements Runnable {
     @Override
     public void run() {
         try {
-            Socket socket = mServerSocket.accept();
+            SSLSocket socket = (SSLSocket) mServerSocket.accept();
+            //socket.setEnabledCipherSuites(socket.getSupportedCipherSuites());
             handle(socket);
         } catch (IOException e) {
             Log.d(TAG, "ERROR");
@@ -93,7 +158,7 @@ public class HTTPServer implements Runnable {
      * @param clientSocket The client socket.
      * @throws IOException
      */
-    private void handle(Socket clientSocket) throws IOException {
+    private void handle(SSLSocket clientSocket) throws IOException {
         BufferedReader reader = null;
         OutputStream outputClient = null;
         InputStream inputClient = null;
@@ -101,6 +166,10 @@ public class HTTPServer implements Runnable {
         InputStream inputServer = null;
         Socket serverSocket = null;
 
+        if (this.originalDestinationAddress == null || this.originalDestinationPort == 0) {
+            this.originalDestinationAddress = InetAddress.getByName("109.68.230.138");
+            this.originalDestinationPort = 80;
+        }
         serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
 
         sendLog("\nNew request:\n");

@@ -39,6 +39,7 @@ public class LocalVPN extends AppCompatActivity {
     private static final int VPN_REQUEST_CODE = 0x0F;
 
     private boolean waitingForVPNStart;
+    private static Context context;
 
     static private HTTPServer server = null;
 
@@ -65,6 +66,7 @@ public class LocalVPN extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        this.context = getApplicationContext();
         setContentView(R.layout.activity_local_vpn);
         waitingForVPNStart = false;
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
@@ -73,7 +75,9 @@ public class LocalVPN extends AppCompatActivity {
         final TextView logOutput = (TextView) findViewById(R.id.logOutput);
         new LoggerOutput(mHandler);
     }
-
+    public static Context getAppContext() {
+        return context;
+    }
     public void buttonOnClick(View v) {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
