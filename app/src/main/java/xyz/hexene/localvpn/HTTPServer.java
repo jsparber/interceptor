@@ -31,6 +31,7 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 public class HTTPServer implements Runnable {
@@ -164,13 +165,16 @@ public class HTTPServer implements Runnable {
         InputStream inputClient = null;
         OutputStream outputServer = null;
         InputStream inputServer = null;
-        Socket serverSocket = null;
+        SSLSocket serverSocket = null;
 
         if (this.originalDestinationAddress == null || this.originalDestinationPort == 0) {
-            this.originalDestinationAddress = InetAddress.getByName("109.68.230.138");
-            this.originalDestinationPort = 80;
+            //this.originalDestinationAddress = InetAddress.getByName("109.68.230.138");
+            //this.originalDestinationPort = 80;
         }
-        serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
+        //for non ssl comunnication
+        //serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
+        SSLSocketFactory factory=(SSLSocketFactory) SSLSocketFactory.getDefault();
+        serverSocket=(SSLSocket) factory.createSocket(this.originalDestinationAddress, this.originalDestinationPort);
 
         sendLog("\nNew request:\n");
 
