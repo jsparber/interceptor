@@ -39,6 +39,7 @@ public class LocalVPN extends AppCompatActivity {
     private static final int VPN_REQUEST_CODE = 0x0F;
 
     private boolean waitingForVPNStart;
+    private String appToTest;
     private static Context context;
 
     static private HTTPServer server = null;
@@ -69,6 +70,9 @@ public class LocalVPN extends AppCompatActivity {
         this.context = getApplicationContext();
         setContentView(R.layout.activity_local_vpn);
         waitingForVPNStart = false;
+        Intent intent = getIntent();
+        appToTest = intent.getStringExtra("appToTest");
+
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
 
@@ -123,7 +127,9 @@ public class LocalVPN extends AppCompatActivity {
             waitingForVPNStart = true;
 
             Intent startIntent = new Intent(this, LocalVPNService.class);
-            startIntent.putExtra("testApp", "com.termux");
+            //startIntent.putExtra("testApp", "com.termux");
+            Log.d("TAG", "AppToTest" + appToTest);
+            startIntent.putExtra("testApp", appToTest);
             startService(startIntent);
             changeButton();
         }
