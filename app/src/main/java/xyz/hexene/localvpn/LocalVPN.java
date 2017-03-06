@@ -31,8 +31,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import com.juliansparber.vpnMITM.HTTPServer;
+import com.juliansparber.vpnMITM.R;
 
 
 public class LocalVPN extends AppCompatActivity {
@@ -40,6 +40,7 @@ public class LocalVPN extends AppCompatActivity {
 
     private boolean waitingForVPNStart;
     private String appToTest;
+    private String appToTestName;
     private static Context context;
 
     static private HTTPServer server = null;
@@ -72,6 +73,7 @@ public class LocalVPN extends AppCompatActivity {
         waitingForVPNStart = false;
         Intent intent = getIntent();
         appToTest = intent.getStringExtra("appToTest");
+        appToTestName = intent.getStringExtra("appToTestName");
 
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
@@ -100,7 +102,8 @@ public class LocalVPN extends AppCompatActivity {
 
     private void startVPN() {
         //LoggerOutput.clear();
-        LoggerOutput.println("VPN  Started...");
+        LoggerOutput.println("Start test for " + appToTestName + "...");
+        LoggerOutput.println("Go to " + appToTestName);
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);

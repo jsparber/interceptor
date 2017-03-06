@@ -18,7 +18,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import xyz.hexene.localvpn.R;
+import com.juliansparber.vpnMITM.R;
 
 public class AppListActivityFragment extends Fragment {
 

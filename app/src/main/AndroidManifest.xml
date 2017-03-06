@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="xyz.hexene.localvpn">
+    package="com.juliansparber.vpnMITM">
 
     <uses-sdk
         android:minSdkVersion="14"
@@ -27,7 +27,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".LocalVPN"
+            android:name="xyz.hexene.localvpn.LocalVPN"
             android:label="@string/app_name" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -35,7 +35,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".LocalVPNService"
+            android:name="xyz.hexene.localvpn.LocalVPNService"
             android:enabled="true"
             android:exported="true"
             android:permission="android.permission.BIND_VPN_SERVICE">

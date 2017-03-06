@@ -5,7 +5,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import xyz.hexene.localvpn.R;
+import com.juliansparber.vpnMITM.R;
 
 public class AppListActivity extends ActionBarActivity {
 

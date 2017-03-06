@@ -13,11 +13,12 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.juliansparber.vpnMITM.R;
+
 import java.io.File;
 import java.util.List;
 
 import xyz.hexene.localvpn.LocalVPN;
-import xyz.hexene.localvpn.R;
 
 public class AppAdapter extends RecyclerView.Adapter<AppAdapter.AppViewHolder> {
     Context context;
@@ -47,6 +48,7 @@ public class AppAdapter extends RecyclerView.Adapter<AppAdapter.AppViewHolder> {
                 Intent intent = new Intent(context, LocalVPN.class);
                 Log.d("appToTest", apps.get(i).toString());
                 intent.putExtra("appToTest", apps.get(i).getApkName());
+                intent.putExtra("appToTestName", apps.get(i).getName());
                 context.startActivity(intent);
 
                 /*Intent shareApkIntent = new Intent();
