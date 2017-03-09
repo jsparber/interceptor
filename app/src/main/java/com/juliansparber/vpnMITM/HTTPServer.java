@@ -269,9 +269,9 @@ public class HTTPServer implements Runnable {
 
         //Create threads for the pipes
         //from phone to middle
-        Thread oneWay = pipe(inputClient, outputServer, "onwWay");
+        Thread oneWay = pipe(inputClient, outputServer, "OUTGOING:");
         //form middle to phone
-        Thread otherWay = pipe(inputServer, outputClient, " seoundway");
+        Thread otherWay = pipe(inputServer, outputClient, "INCOMING:");
 
         oneWay.start();
         otherWay.start();
@@ -332,7 +332,7 @@ public class HTTPServer implements Runnable {
             String temp = null;
             while ((line = bfReader.readLine()) != null) {
                 if (!TextUtils.isEmpty(line))
-                    sendLog("HTTPSSERVER_LINES" + threadTag + line);
+                    sendLog(threadTag + line);
             }
         } catch (IOException e) {
             e.printStackTrace();
