@@ -12,4 +12,6 @@
     <string name="app_size_kib">%1$.2f KiB</string>
     <string name="app_size_mib">%1$.2f MiB</string>
     <string name="app_size_gib">%1$.2f GiB</string>
+    <string name="passive_service_start">Monitor service has been started in passive mode.</string>
+    <string name="passive_service_stop">Monitor service has been stopped. Was in passive mode.</string>
 </resources>

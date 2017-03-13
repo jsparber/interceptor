@@ -2,27 +2,20 @@ package com.juliansparber.vpnMITM;
 
 import android.content.Context;
 import android.content.res.AssetManager;
-import android.text.TextUtils;
 import android.util.Log;
 
-import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.security.KeyStore;
-import java.util.HashMap;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
@@ -32,7 +25,7 @@ import xyz.hexene.localvpn.LoggerOutput;
 
 public class OracleServer implements Runnable {
 
-    public static final String BROADCAST_HTTP_LOG = "xyz.hexene.localvpn.HTTP_SERVER";
+    public static final String BROADCAST_HTTP_LOG = "com.juliansparber.vpnMITM.ORACEL_SERVER";
     private static final String TAG = "OracelServer";
     /**
      * The {@link ServerSocket} that we listen to.
@@ -130,10 +123,13 @@ public class OracleServer implements Runnable {
 
     @Override
     public void run() {
-        Socket socket = null;
         try {
-            socket = mServerSocket.accept();
+            Socket socket = mServerSocket.accept();
             handle(socket);
+        } catch (SSLHandshakeException e) {
+            sendLog("SSL handshake error (that's a good thing)");
+            e.
+            //Log.d(TAG, e.toString());
         } catch (IOException e) {
             Log.d(TAG, "ERROR");
             Log.e(TAG, "Web server error.", e);
@@ -159,7 +155,8 @@ public class OracleServer implements Runnable {
         //clientSocket -> (middleSocket -- middelServerSocket) -> serverSocket
         serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
 
-       // clientSocket = createSSLSocket(LocalVPN.getAppContext(), clientSocket);
+        if (this.sslConnection)
+            clientSocket = createSSLSocket(LocalVPN.getAppContext(), clientSocket);
 
         if (this.sslConnection) {
             SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
@@ -196,7 +193,9 @@ public class OracleServer implements Runnable {
 
     //maybe should use pipedInputStream and pipedOutputStream
     private Thread pipe(final InputStream in, final OutputStream out) {
-        final byte[] buffer = new byte[16384];
+        //i don't know whitch buffer size to use;
+        //2000 seams good enough as buffer size
+        final byte[] buffer = new byte[2000];
         Thread runner = new Thread(new Runnable() {
             public void run() {
                 Log.d(TAG, "Start pipe");
@@ -206,12 +205,11 @@ public class OracleServer implements Runnable {
                 } catch (IOException e) {
                 }
                 try {
-                    while (out != null && in != null) {
-                        //logTraffic(buffer);
+                    while (out != null && in != null && len != -1) {
+                        logTraffic(buffer, len);
                         out.write(buffer, 0, len);
                         len = in.read(buffer);
                     }
-
                 } catch (IOException e) {
                 } catch (ArrayIndexOutOfBoundsException e) {
                     //output conection is closed
@@ -221,27 +219,15 @@ public class OracleServer implements Runnable {
                         out.close();
                     } catch (IOException e) {
                     }
-
                 }
             }
         });
         return runner;
     }
 
-    private void logTraffic(byte[] buffer) {
-        BufferedReader bfReader = null;
-        String line = null;
-        bfReader = new BufferedReader(new InputStreamReader(new ByteArrayInputStream(buffer)));
-        try {
-            String temp = null;
-            while ((line = bfReader.readLine()) != null) {
-                if (!TextUtils.isEmpty(line))
-                    sendLog(line);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+    private void logTraffic(byte[] buffer, int len) {
+        String output = new String(buffer, 0, len);
+        sendLog(output);
     }
 
     private void sendLog(String output) {
