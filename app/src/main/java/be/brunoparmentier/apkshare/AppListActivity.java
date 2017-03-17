@@ -1,18 +1,29 @@
 package be.brunoparmentier.apkshare;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import com.juliansparber.vpnMITM.R;
+import com.juliansparber.vpnMITM.UserAlertDialog;
 
 public class AppListActivity extends ActionBarActivity {
+
+    private static Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_app_list);
+        this.context = getApplicationContext();
+
+        Intent intent=new Intent(getApplicationContext(), UserAlertDialog.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
+        //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
+        getApplicationContext().startActivity(intent);
     }
 
 
@@ -21,6 +32,10 @@ public class AppListActivity extends ActionBarActivity {
         // Inflate the menu; this adds items to the action bar if it is present.
         //getMenuInflater().inflate(R.menu.menu_app_list, menu);
         return false;
+    }
+
+    public static Context getAppContext() {
+        return context;
     }
 
     @Override

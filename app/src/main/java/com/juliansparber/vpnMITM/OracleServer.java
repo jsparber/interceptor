@@ -128,8 +128,13 @@ public class OracleServer implements Runnable {
             handle(socket);
         } catch (SSLHandshakeException e) {
             sendLog("SSL handshake error (that's a good thing)");
-            e.
-            //Log.d(TAG, e.toString());
+            if (e.getCause().getMessage().contains("ALERT_UNKNOWN_CA")) {
+                sendLog("This app does not accept invalid certificats");
+            }
+
+            if (e.getCause().getMessage().contains("ALERT_CERTIFICATE_UNKNOWN")) {
+                sendLog("This app does not accept unknown certificats");
+            }
         } catch (IOException e) {
             Log.d(TAG, "ERROR");
             Log.e(TAG, "Web server error.", e);

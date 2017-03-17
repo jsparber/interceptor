@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.juliansparber.vpnMITM">
 
     <uses-sdk
@@ -7,10 +8,10 @@
         android:targetSdkVersion="24" />
 
     <uses-permission android:name="android.permission.INTERNET" />
-
-    <android:uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <android:uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <android:uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +20,7 @@
         android:theme="@style/AppTheme">
         <activity
             android:name="be.brunoparmentier.apkshare.AppListActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -28,12 +29,14 @@
         </activity>
         <activity
             android:name="xyz.hexene.localvpn.LocalVPN"
-            android:label="@string/app_name" >
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
+
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+
         <service
             android:name="xyz.hexene.localvpn.LocalVPNService"
             android:enabled="true"
@@ -44,6 +47,12 @@
             </intent-filter>
         </service>
 
+        <activity
+            android:name=".UserAlertDialog"
+            android:theme="@android:style/Theme.Material.Light.Dialog.Alert"
+            android:launchMode="singleInstance"
+            tools:targetApi="lollipop">
+        </activity>
     </application>
 
 </manifest>

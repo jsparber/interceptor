@@ -1,5 +1,6 @@
 package com.juliansparber.vpnMITM;
 
+import android.app.DialogFragment;
 import android.content.Context;
 import android.content.res.AssetManager;
 import android.text.TextUtils;
@@ -125,15 +126,27 @@ public class HTTPServer implements Runnable {
         //Recive first bytes of a msg to check if it is ssl traffic
         int len = 0;
         //First bytes from a ssl msg
-        final byte[] firstSSLBytes = {22, 3, 1, 2, 0, 1, 0, 1, -4, 3, 3};
-        final byte[] buffer = new byte[firstSSLBytes.length];
-        len = inputClient.read(buffer);
+        //SSL 3.0 or TLS 1.0, 1.1 and 1.2
+        /*
+        b[0] == 0x16 (message type "SSL handshake")
+        b[1] should be 0x03 (currently newest major version, but who knows in future?)
+        b[5] must be 0x01 (handshake protocol message "HelloClient")
+        */
+
+        final byte[] firstSSLBytes = {22, 3, 1, 3, 4, 5, 6}; // 2, 0, 1, 0, 1, -4, 3, 3};
+        final byte[] buffer = new byte[6];
+        //while (len != -1) {
+            len = inputClient.read(buffer, 0, 6);
+         //   new String (buffer);
+        //}
         if (len != -1) {
-            if (Arrays.equals(firstSSLBytes, buffer)) {
+            //if (Arrays.equals(firstSSLBytes, buffer)) {
+            if (buffer[0] == 0x16 && buffer[5] == 0x01) {
                 Log.d(TAG, "It is ssl traffic");
                 sslConnection = true;
-            }
+           }
         }
+
 
         //Create real server with an ssl socket or a pure socket based on the first bytes of the msg
         OracleServer middleServer = new OracleServer(this.originalDestinationAddress, this.originalDestinationPort, sslConnection);
@@ -143,6 +156,7 @@ public class HTTPServer implements Runnable {
         sendLog("\nNew request:\n");
         if (!sslConnection) {
             sendLog("It's not a ssl connection witch is quite bad");
+
         }
 
         outputServer = serverSocket.getOutputStream();

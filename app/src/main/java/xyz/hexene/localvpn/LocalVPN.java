@@ -33,6 +33,9 @@ import android.widget.TextView;
 
 import com.juliansparber.vpnMITM.HTTPServer;
 import com.juliansparber.vpnMITM.R;
+import com.juliansparber.vpnMITM.UserAlertDialog;
+
+import be.brunoparmentier.apkshare.AppListActivity;
 
 
 public class LocalVPN extends AppCompatActivity {
@@ -46,6 +49,7 @@ public class LocalVPN extends AppCompatActivity {
     static private HTTPServer server = null;
 
     private BroadcastReceiver vpnStateReceiver = new BroadcastReceiver() {
+
         @Override
         public void onReceive(Context context, Intent intent) {
             if (LocalVPNService.BROADCAST_VPN_STATE.equals(intent.getAction())) {
@@ -84,6 +88,7 @@ public class LocalVPN extends AppCompatActivity {
     public static Context getAppContext() {
         return context;
     }
+
     public void buttonOnClick(View v) {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
@@ -147,6 +152,10 @@ public class LocalVPN extends AppCompatActivity {
     private void updateLog(String log) {
         final TextView logOutput = (TextView) findViewById(R.id.logOutput);
         logOutput.setText(logOutput.getText() + log);
+        Intent intent = new Intent(AppListActivity.getAppContext(), UserAlertDialog.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
+        //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
+        AppListActivity.getAppContext().startActivity(intent);
     }
 
     private void changeButton() {

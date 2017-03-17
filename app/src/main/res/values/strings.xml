@@ -14,4 +14,8 @@
     <string name="app_size_gib">%1$.2f GiB</string>
     <string name="passive_service_start">Monitor service has been started in passive mode.</string>
     <string name="passive_service_stop">Monitor service has been stopped. Was in passive mode.</string>
+    <string name="ssl_warning">SSL problem</string>
+    <string name="block_dialog_text">block traffic</string>
+    <string name="cancel_dialog_text">cancel</string>
+    <string name="dialog_text">Some text for a test dialog</string>
 </resources>
