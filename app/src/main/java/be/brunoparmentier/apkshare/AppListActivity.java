@@ -19,11 +19,6 @@ public class AppListActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_app_list);
         this.context = getApplicationContext();
-
-        Intent intent=new Intent(getApplicationContext(), UserAlertDialog.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
-        //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
-        getApplicationContext().startActivity(intent);
     }
 
 

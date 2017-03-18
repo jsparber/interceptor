@@ -32,6 +32,7 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import com.juliansparber.vpnMITM.HTTPServer;
+import com.juliansparber.vpnMITM.Messenger;
 import com.juliansparber.vpnMITM.R;
 import com.juliansparber.vpnMITM.UserAlertDialog;
 
@@ -65,7 +66,16 @@ public class LocalVPN extends AppCompatActivity {
     };
     final private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
-            updateLog((String) msg.obj);
+            if (Messenger.LOG_TEXT == msg.what) {
+                updateLog((String) msg.obj);
+            }
+            else if (Messenger.ALERT_DIALOG == msg.what) {
+                showWarningToUser(msg);
+            }
+            else if(Messenger.ACTION == msg.what) {
+                if (msg.obj.equals("stopVPN"));
+                stopVPN();
+            }
         }
     };
 
@@ -83,7 +93,7 @@ public class LocalVPN extends AppCompatActivity {
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
 
         final TextView logOutput = (TextView) findViewById(R.id.logOutput);
-        new LoggerOutput(mHandler);
+        new Messenger(mHandler);
     }
     public static Context getAppContext() {
         return context;
@@ -93,8 +103,8 @@ public class LocalVPN extends AppCompatActivity {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
 
- //           HTTPServer server = null;
-                //server = new HTTPServer(8080, InetAddress.getByName("109.68.230.138"), 80);
+            //           HTTPServer server = null;
+            //server = new HTTPServer(8080, InetAddress.getByName("109.68.230.138"), 80);
 //            server.start();
             //should be a service instate of a thread
             //server = new HTTPServer(8080, mHandler);
@@ -106,9 +116,9 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void startVPN() {
-        //LoggerOutput.clear();
-        LoggerOutput.println("Start test for " + appToTestName + "...");
-        LoggerOutput.println("Go to " + appToTestName);
+        //Messenger.clear();
+        Messenger.println("Start test for " + appToTestName + "...");
+        Messenger.println("Go to " + appToTestName);
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
@@ -117,15 +127,17 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void stopVPN() {
-        LoggerOutput.clear();
-        final TextView logOutput = (TextView) findViewById(R.id.logOutput);
-        logOutput.setText("");
-        Intent stopIntent = new Intent(this, LocalVPNService.class);
-        stopIntent.putExtra("cmd", "stop");
-        startService(stopIntent);
-        //stopService(new Intent(this, LocalVPNService.class));
-        changeButton();
-        LoggerOutput.println("VPN  stopped");
+        if (LocalVPNService.isRunning()) {
+            Messenger.clear();
+            final TextView logOutput = (TextView) findViewById(R.id.logOutput);
+            logOutput.setText("");
+            Intent stopIntent = new Intent(this, LocalVPNService.class);
+            stopIntent.putExtra("cmd", "stop");
+            startService(stopIntent);
+            //stopService(new Intent(this, LocalVPNService.class));
+            changeButton();
+            Messenger.println("VPN  stopped");
+        }
     }
 
     @Override
@@ -152,9 +164,19 @@ public class LocalVPN extends AppCompatActivity {
     private void updateLog(String log) {
         final TextView logOutput = (TextView) findViewById(R.id.logOutput);
         logOutput.setText(logOutput.getText() + log);
+    }
+
+
+    //Show warning msg to user
+    private void showWarningToUser (Message msg) {
         Intent intent = new Intent(AppListActivity.getAppContext(), UserAlertDialog.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
         //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
+        String [] msg_to_show = (String[]) msg.obj;
+        intent.putExtra(UserAlertDialog.TITLE_TO_SHOW, msg_to_show[0]);
+        intent.putExtra(UserAlertDialog.BODY_TO_SHOW, msg_to_show[1]);
+
+        //has to be the base Activity (don't know why)
         AppListActivity.getAppContext().startActivity(intent);
     }
 

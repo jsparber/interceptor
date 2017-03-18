@@ -1,9 +1,5 @@
 package com.juliansparber.vpnMITM;
 
-import android.app.DialogFragment;
-import android.content.Context;
-import android.content.res.AssetManager;
-import android.text.TextUtils;
 import android.util.Log;
 
 
@@ -13,21 +9,8 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.KeyStore;
-import java.util.Arrays;
 import java.util.HashMap;
-
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLServerSocketFactory;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
-
-import xyz.hexene.localvpn.LoggerOutput;
+import java.util.concurrent.locks.Lock;
 
 public class HTTPServer implements Runnable {
 
@@ -37,7 +20,7 @@ public class HTTPServer implements Runnable {
     public int originalDestinationPort = 0;
     private HashMap<Integer, Integer> proxyPorts = null;
     private int elementToremove;
-
+    public static TrafficBlocker blocker = new TrafficBlocker();
     /**
      * The {@link java.net.ServerSocket} that we listen to.
      */
@@ -133,7 +116,6 @@ public class HTTPServer implements Runnable {
         b[5] must be 0x01 (handshake protocol message "HelloClient")
         */
 
-        final byte[] firstSSLBytes = {22, 3, 1, 3, 4, 5, 6}; // 2, 0, 1, 0, 1, -4, 3, 3};
         final byte[] buffer = new byte[6];
         //while (len != -1) {
             len = inputClient.read(buffer, 0, 6);
@@ -154,30 +136,38 @@ public class HTTPServer implements Runnable {
         serverSocket = new Socket("127.0.0.1", middleServer.getPort());
 
         sendLog("\nNew request:\n");
+
         if (!sslConnection) {
             sendLog("It's not a ssl connection witch is quite bad");
-
+            Messenger.showAlert("Bad news", "This app does not use SSL encryption. Should the traffic be blocked?", blocker);
         }
+        //wait for user interaction
+        blocker.doWait();
+        if (!blocker.blockTraffic) {
+            outputServer = serverSocket.getOutputStream();
+            inputServer = serverSocket.getInputStream();
 
-        outputServer = serverSocket.getOutputStream();
-        inputServer = serverSocket.getInputStream();
+            //Create threads for the pipes
+            //from phone to middle
+            Thread oneWay = pipe(inputClient, outputServer, buffer, len);
+            //form middle to phone
+            Thread otherWay = pipe(inputServer, outputClient, null, -1);
 
-        //Create threads for the pipes
-        //from phone to middle
-        Thread oneWay = pipe(inputClient, outputServer, buffer, len);
-        //form middle to phone
-        Thread otherWay = pipe(inputServer, outputClient, null, -1);
+            oneWay.start();
+            otherWay.start();
 
-        oneWay.start();
-        otherWay.start();
-
-        //wait for the pipes to finish
-        try {
-            oneWay.join();
-            otherWay.join();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
+            //wait for the pipes to finish
+            try {
+                oneWay.join();
+                otherWay.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                serverSocket.close();
+                clientSocket.close();
+            }
+        }
+        else {
             serverSocket.close();
             clientSocket.close();
         }
@@ -229,6 +219,6 @@ public class HTTPServer implements Runnable {
 
     private void sendLog(String output) {
         Log.d(TAG, output);
-        LoggerOutput.println(output);
+        Messenger.println(output);
     }
 }

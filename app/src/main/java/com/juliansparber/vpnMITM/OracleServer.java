@@ -21,7 +21,6 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
 import xyz.hexene.localvpn.LocalVPN;
-import xyz.hexene.localvpn.LoggerOutput;
 
 public class OracleServer implements Runnable {
 
@@ -127,14 +126,19 @@ public class OracleServer implements Runnable {
             Socket socket = mServerSocket.accept();
             handle(socket);
         } catch (SSLHandshakeException e) {
-            sendLog("SSL handshake error (that's a good thing)");
+            String title = "maybe Good news";
+            String body = "random SSL handshake error";
             if (e.getCause().getMessage().contains("ALERT_UNKNOWN_CA")) {
-                sendLog("This app does not accept invalid certificats");
+                title = "Good news";
+                body = "This app does not accept invalid certificats";
             }
+            else if (e.getCause().getMessage().contains("ALERT_CERTIFICATE_UNKNOWN")) {
+                title = "Good news";
+                body = "This app does not accept unknown certificats";
+            }
+            sendLog(title + ": " + body);
+            Messenger.showAlert(title, body, null);
 
-            if (e.getCause().getMessage().contains("ALERT_CERTIFICATE_UNKNOWN")) {
-                sendLog("This app does not accept unknown certificats");
-            }
         } catch (IOException e) {
             Log.d(TAG, "ERROR");
             Log.e(TAG, "Web server error.", e);
@@ -173,6 +177,11 @@ public class OracleServer implements Runnable {
 
         outputServer = serverSocket.getOutputStream();
         inputServer = serverSocket.getInputStream();
+
+        String title = "Bad news";
+        String body = "This app does accept unknown/invalid certificats.";
+        Messenger.showAlert(title, body, null);
+        //should wait for user action
 
         //Create threads for the pipes
         //from phone to middle
@@ -237,6 +246,7 @@ public class OracleServer implements Runnable {
 
     private void sendLog(String output) {
         Log.d(TAG, output);
-        LoggerOutput.println(output);
+        Messenger.println(output);
     }
+
 }

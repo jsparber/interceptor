@@ -212,14 +212,6 @@ public class LocalVPNService extends VpnService {
                         bufferToNetwork.flip();
                         Packet packet = new Packet(bufferToNetwork);
                         if (packet.isUDP()) {
-                            //Filter dns
-                            //if (packet.udpHeader.destinationPort == 53) {
-                            //String v = new String(packet.backingBuffer.array(), Charset.forName("UTF-8"));
-                            //v = v.substring(packet.backingBuffer.position(), packet.backingBuffer.limit());
-                            //Log.d(TAG, packet.toString());
-                            //Log.d(TAG, "Output" + v);
-                            //}
-
                             deviceToNetworkUDPQueue.offer(packet);
                         } else if (packet.isTCP()) {
                             packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
