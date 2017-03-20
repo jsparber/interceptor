@@ -38,11 +38,12 @@ public class Messenger {
         }
     }
 
-    public static void showAlert(String title, String body, TrafficBlocker blocker) {
+    public static void showAlert(String title, String body, int blockerPort) {
         if (mHandler != null) {
             Message msg = Message.obtain();
             msg.what = ALERT_DIALOG;
             msg.obj = new String[]{title, body};
+            msg.arg1 = blockerPort;
             mHandler.sendMessage(msg);
         }
     }

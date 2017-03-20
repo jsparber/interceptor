@@ -14,6 +14,7 @@ import android.view.Window;
 public class UserAlertDialog extends Activity{
     public static final String TITLE_TO_SHOW = "title";
     public static final String BODY_TO_SHOW = "body";
+    public static final String BLOCKER_PORT = "blocker_port";
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -32,17 +33,24 @@ public class UserAlertDialog extends Activity{
                 .setMessage(getIntent().getStringExtra(BODY_TO_SHOW))
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // continue with delete
-                        //Messenger.doAction("stopVPN");
                         closeUserAlertDialog();
-                        HTTPServer.blocker.doNotify(true);
+                        int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
+                        try {
+                            SharedProxyInfo.blocker.get(elementToRemove).doNotify(true);
+                        } catch (NullPointerException e) {
+
+                        }
                     }
                 })
                 .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // do nothing
                         closeUserAlertDialog();
-                        HTTPServer.blocker.doNotify(false);
+                        int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
+                        try {
+                            SharedProxyInfo.blocker.get(elementToRemove).doNotify(false);
+                        } catch (NullPointerException e) {
+
+                        }
                     }
                 })
                 .setIcon(android.R.drawable.ic_dialog_alert)

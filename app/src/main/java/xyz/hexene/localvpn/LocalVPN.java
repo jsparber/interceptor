@@ -31,7 +31,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import com.juliansparber.vpnMITM.HTTPServer;
+import com.juliansparber.vpnMITM.BufferServer;
 import com.juliansparber.vpnMITM.Messenger;
 import com.juliansparber.vpnMITM.R;
 import com.juliansparber.vpnMITM.UserAlertDialog;
@@ -47,7 +47,7 @@ public class LocalVPN extends AppCompatActivity {
     private String appToTestName;
     private static Context context;
 
-    static private HTTPServer server = null;
+    static private BufferServer server = null;
 
     private BroadcastReceiver vpnStateReceiver = new BroadcastReceiver() {
 
@@ -103,11 +103,11 @@ public class LocalVPN extends AppCompatActivity {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
 
-            //           HTTPServer server = null;
-            //server = new HTTPServer(8080, InetAddress.getByName("109.68.230.138"), 80);
+            //           BufferServer server = null;
+            //server = new BufferServer(8080, InetAddress.getByName("109.68.230.138"), 80);
 //            server.start();
             //should be a service instate of a thread
-            //server = new HTTPServer(8080, mHandler);
+            //server = new BufferServer(8080, mHandler);
             //server.start();
         } else {
             stopVPN();
@@ -175,6 +175,7 @@ public class LocalVPN extends AppCompatActivity {
         String [] msg_to_show = (String[]) msg.obj;
         intent.putExtra(UserAlertDialog.TITLE_TO_SHOW, msg_to_show[0]);
         intent.putExtra(UserAlertDialog.BODY_TO_SHOW, msg_to_show[1]);
+        intent.putExtra(UserAlertDialog.BLOCKER_PORT, msg.arg1);
 
         //has to be the base Activity (don't know why)
         AppListActivity.getAppContext().startActivity(intent);

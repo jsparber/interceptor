@@ -25,8 +25,9 @@ import android.os.ParcelFileDescriptor;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-import com.juliansparber.vpnMITM.HTTPServer;
+import com.juliansparber.vpnMITM.BufferServer;
 import com.juliansparber.vpnMITM.R;
+import com.juliansparber.vpnMITM.SharedProxyInfo;
 
 import java.io.Closeable;
 import java.io.FileDescriptor;
@@ -37,7 +38,6 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
-import java.util.HashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -193,7 +193,7 @@ public class LocalVPNService extends VpnService {
 
             FileChannel vpnInput = new FileInputStream(vpnFileDescriptor).getChannel();
             FileChannel vpnOutput = new FileOutputStream(vpnFileDescriptor).getChannel();
-            HashMap<Integer, Integer> proxyPorts = new HashMap<Integer, Integer>();
+            //HashMap<Integer, Integer> proxyPorts = new HashMap<Integer, Integer>();
 
             try {
                 ByteBuffer bufferToNetwork = null;
@@ -214,23 +214,23 @@ public class LocalVPNService extends VpnService {
                         if (packet.isUDP()) {
                             deviceToNetworkUDPQueue.offer(packet);
                         } else if (packet.isTCP()) {
-                            packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
-                            packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
-                            Log.d(TAG, "Used source port: " + packet.tcpHeader.sourcePort);
+                            synchronized (SharedProxyInfo.portRedirection) {
+                                packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
+                                packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
+                                //Log.d(TAG, "Used source port: " + packet.tcpHeader.sourcePort);
 
-                            if (proxyPorts.get(packet.tcpHeader.sourcePort) == null) {
-                                HTTPServer server = new HTTPServer(0, packet.ip4Header.destinationAddress, packet.tcpHeader.destinationPort,
-                                        proxyPorts, packet.tcpHeader.sourcePort
-                                        );
-                                server.start();
-                                proxyPorts.put(packet.tcpHeader.sourcePort, server.getPort());
-                            }
+                                if (SharedProxyInfo.portRedirection.get(packet.tcpHeader.sourcePort) == null) {
+                                    BufferServer server = new BufferServer(0, packet.ip4Header.destinationAddress, packet.tcpHeader.destinationPort, packet.tcpHeader.sourcePort);
+                                    server.start();
+                                    SharedProxyInfo.portRedirection.put(packet.tcpHeader.sourcePort, server.getPort());
+                                }
                                 packet.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
 
-                            //Set destination port in base of the sourcePort
-                            packet.tcpHeader.destinationPort = proxyPorts.get(packet.tcpHeader.sourcePort);
+                                //Set destination port in base of the sourcePort
+                                packet.tcpHeader.destinationPort = SharedProxyInfo.portRedirection.get(packet.tcpHeader.sourcePort);
+                            }
 
-                            deviceToNetworkTCPQueue.offer(packet);
+                                deviceToNetworkTCPQueue.offer(packet);
                         } else {
                             Log.w(TAG, "Unknown packet type");
                             Log.w(TAG, packet.ip4Header.toString());
