@@ -35,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
@@ -195,6 +196,13 @@ public class LocalVPNService extends VpnService {
             FileChannel vpnOutput = new FileOutputStream(vpnFileDescriptor).getChannel();
             //HashMap<Integer, Integer> proxyPorts = new HashMap<Integer, Integer>();
 
+            int proxyPort = 0;
+            try {
+                proxyPort = new BufferServer(0, 20).getPort();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             try {
                 ByteBuffer bufferToNetwork = null;
                 boolean dataSent = true;
@@ -214,23 +222,13 @@ public class LocalVPNService extends VpnService {
                         if (packet.isUDP()) {
                             deviceToNetworkUDPQueue.offer(packet);
                         } else if (packet.isTCP()) {
-                            synchronized (SharedProxyInfo.portRedirection) {
-                                packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
-                                packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
-                                //Log.d(TAG, "Used source port: " + packet.tcpHeader.sourcePort);
+                            packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
+                            packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
 
-                                if (SharedProxyInfo.portRedirection.get(packet.tcpHeader.sourcePort) == null) {
-                                    BufferServer server = new BufferServer(0, packet.ip4Header.destinationAddress, packet.tcpHeader.destinationPort, packet.tcpHeader.sourcePort);
-                                    server.start();
-                                    SharedProxyInfo.portRedirection.put(packet.tcpHeader.sourcePort, server.getPort());
-                                }
-                                packet.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
+                            packet.ip4Header.destinationAddress = InetAddress.getByName(VPN_ADDRESS);
+                            packet.tcpHeader.destinationPort = proxyPort;
 
-                                //Set destination port in base of the sourcePort
-                                packet.tcpHeader.destinationPort = SharedProxyInfo.portRedirection.get(packet.tcpHeader.sourcePort);
-                            }
-
-                                deviceToNetworkTCPQueue.offer(packet);
+                            deviceToNetworkTCPQueue.offer(packet);
                         } else {
                             Log.w(TAG, "Unknown packet type");
                             Log.w(TAG, packet.ip4Header.toString());

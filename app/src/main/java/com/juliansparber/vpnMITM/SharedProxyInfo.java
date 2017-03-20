@@ -8,12 +8,8 @@ import java.util.HashMap;
 
 public class SharedProxyInfo {
     //PORT, proxy object
-    public static HashMap<Integer, Integer> portRedirection = new HashMap<Integer, Integer>();
+    public static HashMap<Integer, String> portRedirection = new HashMap<>();
     public static HashMap<Integer, TrafficBlocker> blocker = new HashMap<Integer, TrafficBlocker>();
     public SharedProxyInfo() {
-    }
-
-    public static void addNewProxyServer() {
-
     }
 }

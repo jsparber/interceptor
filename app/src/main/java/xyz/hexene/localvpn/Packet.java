@@ -99,8 +99,8 @@ public class Packet
     public void updateTCPBuffer(ByteBuffer buffer, byte flags, long sequenceNum, long ackNum, int payloadSize)
     {
         //reset the sourceAddress:Port to the original ones and complite te redirection
-        this.ip4Header.sourceAddress = this.ip4Header.originalDestinationAddress;
-        this.tcpHeader.sourcePort = this.tcpHeader.originalDestinationPort;
+        //this.ip4Header.sourceAddress = this.ip4Header.originalDestinationAddress;
+        //this.tcpHeader.sourcePort = this.tcpHeader.originalDestinationPort;
         buffer.position(0);
         fillHeader(buffer);
         backingBuffer = buffer;
@@ -176,9 +176,15 @@ public class Packet
     {
         int sum = 0;
         int tcpLength = TCP_HEADER_SIZE + payloadSize;
+        ByteBuffer buffer;
 
         // Calculate pseudo-header checksum
-        ByteBuffer buffer = ByteBuffer.wrap(ip4Header.sourceAddress.getAddress());
+        //
+        if (ip4Header.originalDestinationAddress != null)
+            buffer = ByteBuffer.wrap(ip4Header.originalDestinationAddress.getAddress());
+        else
+            buffer = ByteBuffer.wrap(ip4Header.sourceAddress.getAddress());
+
         sum = BitUtils.getUnsignedShort(buffer.getShort()) + BitUtils.getUnsignedShort(buffer.getShort());
 
         buffer = ByteBuffer.wrap(ip4Header.destinationAddress.getAddress());
@@ -306,7 +312,11 @@ public class Packet
             buffer.put((byte) this.protocol.getNumber());
             buffer.putShort((short) this.headerChecksum);
 
-            buffer.put(this.sourceAddress.getAddress());
+            if (this.originalDestinationAddress != null)
+                buffer.put(this.originalDestinationAddress.getAddress());
+            else
+                buffer.put(this.sourceAddress.getAddress());
+
             buffer.put(this.destinationAddress.getAddress());
         }
 
@@ -411,9 +421,8 @@ public class Packet
 
         private void fillHeader(ByteBuffer buffer)
         {
-            buffer.putShort((short) sourcePort);
-            //Ultra hack should be done in a much better way
-            //buffer.putShort((short) 80);
+            //buffer.putShort((short) sourcePort);
+            buffer.putShort((short) originalDestinationPort);
             buffer.putShort((short) destinationPort);
 
             buffer.putInt((int) sequenceNumber);

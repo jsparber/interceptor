@@ -7,19 +7,22 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.net.ssl.SSLHandshakeException;
 
+import xyz.hexene.localvpn.TCB;
+
 public class BufferServer implements Runnable {
 
-    public static final String BROADCAST_HTTP_LOG = "com.juliansparber.vpnMITM.HTTP_SERVER";
+    public static final String BROADCAST_HTTP_LOG = "com.juliansparber.vpnMITM.BUFFER_SERVER";
     private static final String TAG = "BufferServer";
-    public InetAddress originalDestinationAddress = null;
-    public int originalDestinationPort = 0;
-    private int elementToRemove;
+    private final ExecutorService pool;
     /**
      * The {@link java.net.ServerSocket} that we listen to.
      */
@@ -29,21 +32,16 @@ public class BufferServer implements Runnable {
     /**
      * WebServer constructor.
      */
-    public BufferServer(int port, InetAddress orgDestAddr, int origPort, int sourcePort) {
-        this.elementToRemove = sourcePort;
-        this.originalDestinationAddress = orgDestAddr;
-        this.originalDestinationPort = origPort;
-
-        try {
-            mServerSocket = new ServerSocket(port);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public BufferServer(int port, int poolSize) throws IOException {
+        mServerSocket = new ServerSocket(port);
+        pool = Executors.newFixedThreadPool(poolSize);
+        start();
     }
 
     /**
      * This method starts the web server listening to the specified port.
      */
+
     public Thread start() {
         Thread thread = new Thread(this);
         thread.start();
@@ -56,12 +54,6 @@ public class BufferServer implements Runnable {
      */
     public void stop() {
         try {
-            /*if (SharedProxyInfo.portRedirection != null)
-                synchronized (SharedProxyInfo.portRedirection) {
-                    SharedProxyInfo.portRedirection.remove(elementToRemove);
-                }
-                */
-            //sendLog("Remove port form Redirection list: " + elementToRemove);
             if (null != mServerSocket) {
                 mServerSocket.close();
                 mServerSocket = null;
@@ -75,10 +67,11 @@ public class BufferServer implements Runnable {
         return this.mServerSocket.getLocalPort();
     }
 
-    @Override
+    /*@Override
     public void run() {
         try {
             Socket socket = mServerSocket.accept();
+            start();
             handle(socket);
         } catch (IOException e) {
             Log.d(TAG, "ERROR");
@@ -87,6 +80,34 @@ public class BufferServer implements Runnable {
         }
         Log.d(TAG, "Channel closed");
         stop();
+    }
+    */
+
+    @Override
+    public void run() { // run the service
+        try {
+            for (;;) {
+                pool.execute(new Handler(mServerSocket.accept()));
+            }
+        } catch (IOException ex) {
+            pool.shutdown();
+        }
+    }
+
+    class Handler implements Runnable {
+        private final Socket socket;
+
+        Handler(Socket socket) {
+            this.socket = socket;
+        }
+
+        public void run() {
+            try {
+                handle(this.socket);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -112,7 +133,7 @@ public class BufferServer implements Runnable {
         int len = 0;
         final byte[] buffer = new byte[100];
         len = inputClient.read(buffer);
-        Log.d(TAG, "PORT: " + this.getPort());
+        //Log.d(TAG, "PORT: " + this.getPort());
 
         /*
         //Create a ssl socket and try to perform handshake
@@ -125,7 +146,11 @@ public class BufferServer implements Runnable {
         //When SSL handshake fails because it is not ssl traffic create a normal socket and
         // inject the first bytes which are read from inputStream for the SSL handshake
         //
-        serverSocket = new Socket(this.originalDestinationAddress, this.originalDestinationPort);
+        int port = ((InetSocketAddress) clientSocket.getRemoteSocketAddress()).getPort();
+        String tmp = SharedProxyInfo.portRedirection.get(clientSocket.getPort());
+        if (tmp != null) {
+            serverSocket = new Socket(tmp.split(":")[0].substring(1), Integer.parseInt(tmp.split(":")[1]));
+        }
 
         sendLog("New request:\n" +
                 "First bytes:\n" +
@@ -161,9 +186,9 @@ public class BufferServer implements Runnable {
         //wait for the pipes to finish
         try {
             oneWay.join();
-            Log.d(TAG+this.getPort(), "oneWay has joined");
+            //Log.d(TAG+this.getPort(), "oneWay has joined");
             otherWay.join();
-            Log.d(TAG+this.getPort(), "otherWay has joined");
+           // Log.d(TAG+this.getPort(), "otherWay has joined");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }// finally {
@@ -206,34 +231,34 @@ public class BufferServer implements Runnable {
 
                 int len = 0;
 //                while (!clientSocket.isClosed() && clientSocket.isConnected() && !error) {
-                    try {
-                        while (len != -1) {
-                            len = in.read(buffer);
-                            //if there is data to write, write it to the OutputStream
-                            if (len != -1)
-                                out.write(buffer, 0, len);
-                        }
-                    } catch (SocketException e) {
-                        Log.d(TAG,"Socket Exeption");
-                        Log.d(TAG, clientSocket.toString());
-                    } catch (NullPointerException e) {
-                        //close all conections actually should never happen
-                        if (in == null)
-                            Log.d(TAG, "Server has closed socked");
-                        else if (out == null)
-                            Log.d(TAG, "Client has closed socked");
-                        else
-                            e.printStackTrace();
-                        error = true;
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        error = true;
-                    } catch (ArrayIndexOutOfBoundsException e) {
-                        //output conection is closed
-                        e.printStackTrace();
-                        error = true;
+                try {
+                    while (len != -1) {
+                        len = in.read(buffer);
+                        //if there is data to write, write it to the OutputStream
+                        if (len != -1)
+                            out.write(buffer, 0, len);
                     }
- //               }
+                } catch (SocketException e) {
+                    Log.d(TAG,"Socket Exeption");
+                    Log.d(TAG, clientSocket.toString());
+                } catch (NullPointerException e) {
+                    //close all conections actually should never happen
+                    if (in == null)
+                        Log.d(TAG, "Server has closed socked");
+                    else if (out == null)
+                        Log.d(TAG, "Client has closed socked");
+                    else
+                        e.printStackTrace();
+                    error = true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    error = true;
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    //output conection is closed
+                    e.printStackTrace();
+                    error = true;
+                }
+                //               }
             }
         });
         return runner;

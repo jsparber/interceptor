@@ -16,11 +16,15 @@
 
 package xyz.hexene.localvpn;
 
+import android.os.Build;
 import android.util.Log;
+
+import com.juliansparber.vpnMITM.SharedProxyInfo;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -128,6 +132,10 @@ public class TCPOutput implements Runnable
             SocketChannel outputChannel = SocketChannel.open();
             outputChannel.configureBlocking(false);
             vpnService.protect(outputChannel.socket());
+            outputChannel.socket().bind(null);
+
+            SharedProxyInfo.portRedirection.put(outputChannel.socket().getLocalPort(),
+                    currentPacket.ip4Header.originalDestinationAddress + ":" + currentPacket.tcpHeader.originalDestinationPort);
 
             TCB tcb = new TCB(ipAndPort, random.nextInt(Short.MAX_VALUE + 1), tcpHeader.sequenceNumber, tcpHeader.sequenceNumber + 1,
                     tcpHeader.acknowledgementNumber, outputChannel, currentPacket);
@@ -136,6 +144,7 @@ public class TCPOutput implements Runnable
             try
             {
                 outputChannel.connect(new InetSocketAddress(destinationAddress, destinationPort));
+
                 if (outputChannel.finishConnect())
                 {
                     tcb.status = TCBStatus.SYN_RECEIVED;
