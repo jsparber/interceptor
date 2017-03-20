@@ -6,15 +6,12 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-
-import javax.net.ssl.SSLHandshakeException;
 
 import xyz.hexene.localvpn.TCB;
 
@@ -151,7 +148,7 @@ public class BufferServer implements Runnable {
         if (tmp != null) {
             serverSocket = new Socket(tmp.split(":")[0].substring(1), Integer.parseInt(tmp.split(":")[1]));
         }
-
+        Log.d(TAG, TCB.getTcbCache());
         sendLog("New request:\n" +
                 "First bytes:\n" +
                 new String(buffer) + "\n");
@@ -176,19 +173,19 @@ public class BufferServer implements Runnable {
 
         //Create threads for the pipes
         //from phone to middle
-        Thread oneWay = pipe(clientSocket, inputClient, outputServer, buffer, len);
+        Thread oneWay = pipe("Pipe:phone->network", clientSocket, serverSocket, inputClient, outputServer, buffer, len);
         //form middle to phone
-        Thread otherWay = pipe(clientSocket, inputServer, outputClient);
+        Thread otherWay = pipe("Pipe:network->phone", clientSocket, serverSocket, inputServer, outputClient);
 
         oneWay.start();
         otherWay.start();
 
         //wait for the pipes to finish
         try {
+            otherWay.join();
             oneWay.join();
             //Log.d(TAG+this.getPort(), "oneWay has joined");
-            otherWay.join();
-           // Log.d(TAG+this.getPort(), "otherWay has joined");
+            // Log.d(TAG+this.getPort(), "otherWay has joined");
         } catch (InterruptedException e) {
             e.printStackTrace();
         }// finally {
@@ -208,16 +205,16 @@ public class BufferServer implements Runnable {
     }
 
 
-    public Thread pipe(Socket clientSocket, InputStream inputClient, OutputStream outputServer) {
-        return pipe(clientSocket, inputClient, outputServer, null, -1);
+    public Thread pipe(String name, Socket clientSocket, Socket serverSocket, InputStream inputClient, OutputStream outputServer) {
+        return pipe(name, clientSocket, serverSocket, inputClient, outputServer, null, -1);
     }
 
     //maybe should use pipedInputStream and pipedOutputStream
-    public Thread pipe(final Socket clientSocket, final InputStream in, final OutputStream out, final byte[] preBuffer, final int preBufferLen) {
+    public Thread pipe(final String name, final Socket clientSocket, final Socket serverSocket, final InputStream in, final OutputStream out, final byte[] preBuffer, final int preBufferLen) {
         //Buffer size 16384
         final Thread runner = new Thread(new Runnable() {
             public void run() {
-                Log.d(TAG, "Start pipe");
+                Log.d(TAG, name + "Start pipe");
                 byte[] buffer = new byte[2000];
                 boolean error = false;
                 //write cached first Bytes to the outputStream
@@ -229,38 +226,53 @@ public class BufferServer implements Runnable {
                     }
                 }
 
-                int len = 0;
-//                while (!clientSocket.isClosed() && clientSocket.isConnected() && !error) {
-                try {
-                    while (len != -1) {
-                        len = in.read(buffer);
-                        //if there is data to write, write it to the OutputStream
-                        if (len != -1)
-                            out.write(buffer, 0, len);
-                    }
-                } catch (SocketException e) {
-                    Log.d(TAG,"Socket Exeption");
-                    Log.d(TAG, clientSocket.toString());
-                } catch (NullPointerException e) {
-                    //close all conections actually should never happen
-                    if (in == null)
-                        Log.d(TAG, "Server has closed socked");
-                    else if (out == null)
-                        Log.d(TAG, "Client has closed socked");
-                    else
+                while (!error) {
+                    int len = 0;
+                    try {
+                        while (len != -1) {
+                            len = in.read(buffer);
+                            //if there is data to write, write it to the OutputStream
+                            if (len != -1) {
+                                    out.write(buffer, 0, len);
+                            }
+                            else {
+                                Log.d(TAG, name + "Should I close the socket?");
+                                error = true;
+                            }
+                        }
+                    } catch (SocketException e) {
+                        Log.d(TAG,name + " Socket Exeption");
+                        Log.d(TAG, clientSocket.toString());
+                        error = true;
+                    } catch (NullPointerException e) {
+                        //close all conections actually should never happen
+                        if (in == null)
+                            Log.d(TAG, "Server has closed socked");
+                        else if (out == null)
+                            Log.d(TAG, "Client has closed socked");
+                        else
+                            e.printStackTrace();
+                        error = true;
+                    } catch (IOException e) {
                         e.printStackTrace();
-                    error = true;
+                        error = true;
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        //output conection is closed
+                        e.printStackTrace();
+                        error = true;
+                    }
+                }
+                try {
+                    in.close();
+                    out.close();
+                    serverSocket.close();
+                    clientSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
-                    error = true;
-                } catch (ArrayIndexOutOfBoundsException e) {
-                    //output conection is closed
-                    e.printStackTrace();
-                    error = true;
                 }
-                //               }
             }
         });
+        runner.setName(name);
         return runner;
     }
 

@@ -36,6 +36,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.Selector;
@@ -214,19 +215,38 @@ public class LocalVPNService extends VpnService {
                         bufferToNetwork.clear();
 
                     // TODO: Block when not connected
-                    int readBytes = vpnInput.read(bufferToNetwork);
+                    int readBytes = 0;
+                    try {
+                        readBytes = vpnInput.read(bufferToNetwork);
+                        if (readBytes > 0) {
+                            Log.d(TAG, "Number of bytes got: " + readBytes);
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                     if (readBytes > 0) {
                         dataSent = true;
                         bufferToNetwork.flip();
-                        Packet packet = new Packet(bufferToNetwork);
+                        Packet packet = null;
+                        try {
+                            packet = new Packet(bufferToNetwork);
+                        } catch (UnknownHostException e) {
+                            e.printStackTrace();
+                        }
                         if (packet.isUDP()) {
                             deviceToNetworkUDPQueue.offer(packet);
                         } else if (packet.isTCP()) {
                             packet.ip4Header.originalDestinationAddress = packet.ip4Header.destinationAddress;
                             packet.tcpHeader.originalDestinationPort = packet.tcpHeader.destinationPort;
 
-                            packet.ip4Header.destinationAddress = InetAddress.getByName(VPN_ADDRESS);
+                            /*
+                            try {
+                                packet.ip4Header.destinationAddress = InetAddress.getByName(REDIRECTION_ADDRESS);
+                            } catch (UnknownHostException e) {
+                                e.printStackTrace();
+                            }
                             packet.tcpHeader.destinationPort = proxyPort;
+                            */
 
                             deviceToNetworkTCPQueue.offer(packet);
                         } else {
@@ -243,7 +263,11 @@ public class LocalVPNService extends VpnService {
                         bufferFromNetwork.flip();
 
                         while (bufferFromNetwork.hasRemaining())
-                            vpnOutput.write(bufferFromNetwork);
+                            try {
+                                vpnOutput.write(bufferFromNetwork);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         dataReceived = true;
 
                         ByteBufferPool.release(bufferFromNetwork);
@@ -258,8 +282,6 @@ public class LocalVPNService extends VpnService {
                 }
             } catch (InterruptedException e) {
                 Log.i(TAG, "Stopping");
-            } catch (IOException e) {
-                Log.w(TAG, e.toString(), e);
             } finally {
                 closeResources(vpnInput, vpnOutput);
             }

@@ -62,6 +62,10 @@ public class TCB
                 }
             });
 
+    public static String getTcbCache() {
+        return tcbCache.toString();
+    }
+
     public static TCB getTCB(String ipAndPort)
     {
         synchronized (tcbCache)
