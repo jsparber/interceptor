@@ -22,24 +22,19 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class ByteBufferPool
 {
     private static final int BUFFER_SIZE = 1500; // XXX: Is this ideal?
-    private static ConcurrentLinkedQueue<ByteBuffer> pool = new ConcurrentLinkedQueue<>();
+    //private  ConcurrentLinkedQueue<ByteBuffer> pool = new ConcurrentLinkedQueue<>();
 
     public static ByteBuffer acquire()
     {
-        ByteBuffer buffer = pool.poll();
-        if (buffer == null)
-            buffer = ByteBuffer.allocateDirect(BUFFER_SIZE+20); // Using DirectBuffer for zero-copy
+        //ByteBuffer buffer  = null;//= pool.poll();
+        //if (buffer == null)
+        ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE+20); // Using DirectBuffer for zero-copy
         return buffer;
     }
 
     public static void release(ByteBuffer buffer)
     {
         buffer.clear();
-        pool.offer(buffer);
-    }
-
-    public static void clear()
-    {
-        pool.clear();
+        //pool.offer(buffer);
     }
 }
