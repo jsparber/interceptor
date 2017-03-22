@@ -1,15 +1,21 @@
 package com.juliansparber.vpnMITM;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 
 import android.app.Activity;
 import android.support.annotation.RequiresApi;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.view.Window;
+
+import be.brunoparmentier.apkshare.AppListActivity;
+import xyz.hexene.localvpn.LocalVPN;
 
 public class UserAlertDialog extends Activity{
     public static final String TITLE_TO_SHOW = "title";
@@ -28,41 +34,46 @@ public class UserAlertDialog extends Activity{
                 ViewGroup.LayoutParams.WRAP_CONTENT
         );
 
-        new AlertDialog.Builder(this)
-                .setTitle(getIntent().getStringExtra(TITLE_TO_SHOW))
-                .setMessage(getIntent().getStringExtra(BODY_TO_SHOW))
-                .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        closeUserAlertDialog();
-                        int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
-                        try {
-                            SharedProxyInfo.blocker.get(elementToRemove).doNotify(true);
-                        } catch (NullPointerException e) {
+        int flags = getIntent().getFlags();
+        if ((flags & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
+            Log.d("TAG", "Lanched from history");
+            Intent intent = new Intent(this, LocalVPN.class);
+            startActivity(intent);
+            finish();
+        }
+        else {
 
-                        }
-                    }
-                })
-                .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        closeUserAlertDialog();
-                        int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
-                        try {
-                            SharedProxyInfo.blocker.get(elementToRemove).doNotify(false);
-                        } catch (NullPointerException e) {
+            new AlertDialog.Builder(this)
+                    .setTitle(getIntent().getStringExtra(TITLE_TO_SHOW))
+                    .setMessage(getIntent().getStringExtra(BODY_TO_SHOW))
+                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            closeUserAlertDialog();
+                            int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
+                            try {
+                                SharedProxyInfo.blocker.get(elementToRemove).doNotify(true);
+                            } catch (NullPointerException e) {
 
+                            }
                         }
-                    }
-                })
-                .setIcon(android.R.drawable.ic_dialog_alert)
-                .show();
+                    })
+                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            closeUserAlertDialog();
+                            int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
+                            try {
+                                SharedProxyInfo.blocker.get(elementToRemove).doNotify(false);
+                            } catch (NullPointerException e) {
+
+                            }
+                        }
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .show();
+        }
     }
 
     private void closeUserAlertDialog() {
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
         this.finish();
         this.overridePendingTransition(0, 0);
     }

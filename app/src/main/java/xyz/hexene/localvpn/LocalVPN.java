@@ -170,7 +170,7 @@ public class LocalVPN extends AppCompatActivity {
     //Show warning msg to user
     private void showWarningToUser (Message msg) {
         Intent intent = new Intent(AppListActivity.getAppContext(), UserAlertDialog.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
         //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
         String [] msg_to_show = (String[]) msg.obj;
         intent.putExtra(UserAlertDialog.TITLE_TO_SHOW, msg_to_show[0]);
@@ -178,7 +178,9 @@ public class LocalVPN extends AppCompatActivity {
         intent.putExtra(UserAlertDialog.BLOCKER_PORT, msg.arg1);
 
         //has to be the base Activity (don't know why)
-        AppListActivity.getAppContext().startActivity(intent);
+        //AppListActivity.getAppContext().startActivity(intent);
+        //AppListActivity.getAppContext().startActivity(F);
+        startActivity(intent);
     }
 
     private void changeButton() {

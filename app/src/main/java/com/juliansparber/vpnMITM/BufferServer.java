@@ -6,6 +6,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -17,68 +18,21 @@ import xyz.hexene.localvpn.TCB;
 
 public class BufferServer implements Runnable {
 
-    public static final String BROADCAST_HTTP_LOG = "com.juliansparber.vpnMITM.BUFFER_SERVER";
-    private static final String TAG = "BufferServer";
+    private static final String TAG = BufferServer.class.getSimpleName();
     private final ExecutorService pool;
-    /**
-     * The {@link java.net.ServerSocket} that we listen to.
-     */
-    //private SSLServerSocket mServerSocket;
-    private ServerSocket mServerSocket;
+    protected final ServerSocket mServerSocket;
 
     /**
      * WebServer constructor.
      */
     public BufferServer(int port, int poolSize) throws IOException {
-        mServerSocket = new ServerSocket(port);
-        pool = Executors.newFixedThreadPool(poolSize);
-        start();
-    }
-
-    /**
-     * This method starts the web server listening to the specified port.
-     */
-
-    public Thread start() {
-        Thread thread = new Thread(this);
-        thread.start();
-        return thread;
-    }
-
-
-    /**
-     * This method stops the web server
-     */
-    public void stop() {
-        try {
-            if (null != mServerSocket) {
-                mServerSocket.close();
-                mServerSocket = null;
-            }
-        } catch (IOException e) {
-            Log.e(TAG, "Error closing the server socket.", e);
-        }
+        this.mServerSocket = new ServerSocket(port);
+        this.pool = Executors.newFixedThreadPool(poolSize);
     }
 
     public int getPort() {
         return this.mServerSocket.getLocalPort();
     }
-
-    /*@Override
-    public void run() {
-        try {
-            Socket socket = mServerSocket.accept();
-            start();
-            handle(socket);
-        } catch (IOException e) {
-            Log.d(TAG, "ERROR");
-            Log.e(TAG, "Web server error.", e);
-            Log.e(TAG, e.toString());
-        }
-        Log.d(TAG, "Channel closed");
-        stop();
-    }
-    */
 
     @Override
     public void run() { // run the service
@@ -88,6 +42,11 @@ public class BufferServer implements Runnable {
             }
         } catch (IOException ex) {
             pool.shutdown();
+            try {
+                mServerSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -107,13 +66,7 @@ public class BufferServer implements Runnable {
         }
     }
 
-    /**
-     * Respond to a request from a client.
-     *
-     * @param clientSocket The client socket.
-     * @throws IOException
-     */
-    private void handle(Socket clientSocket) throws IOException {
+    protected void handle(Socket clientSocket) throws IOException {
         OutputStream outputClient = null;
         InputStream inputClient = null;
         OutputStream outputServer = null;
@@ -132,23 +85,28 @@ public class BufferServer implements Runnable {
         len = inputClient.read(buffer);
         //Log.d(TAG, "PORT: " + this.getPort());
 
-        /*
+        int port = ((InetSocketAddress) clientSocket.getRemoteSocketAddress()).getPort();
+        String tmp = SharedProxyInfo.portRedirection.get(clientSocket.getPort());
+        String originalHost = tmp.split(":")[0].substring(1);
+        int originalPort = Integer.parseInt(tmp.split(":")[1]);
+
         //Create a ssl socket and try to perform handshake
-        SSLServer middleServer = new SSLServer(this.originalDestinationAddress, this.originalDestinationPort, elementToRemove);
-        middleServer.start();
-        //Connect to the SSLServer
-        serverSocket = new Socket("127.0.0.1", middleServer.getPort());
-        */
+        try {
+            SSLBufferServer middleServer = new SSLBufferServer(originalHost, originalPort);
+            middleServer.start();
+            //Connect to the SSLServer
+            serverSocket = new Socket("127.0.0.1", middleServer.getPort());
+        } catch (IOException e) {
+            Log.d(TAG, e.toString());
+        }
 
         //When SSL handshake fails because it is not ssl traffic create a normal socket and
         // inject the first bytes which are read from inputStream for the SSL handshake
         //
-        int port = ((InetSocketAddress) clientSocket.getRemoteSocketAddress()).getPort();
-        String tmp = SharedProxyInfo.portRedirection.get(clientSocket.getPort());
         if (tmp != null) {
-            serverSocket = new Socket(tmp.split(":")[0].substring(1), Integer.parseInt(tmp.split(":")[1]));
+            //serverSocket = new Socket(tmp.split(":")[0].substring(1), Integer.parseInt(tmp.split(":")[1]));
         }
-        Log.d(TAG, TCB.getTcbCache());
+
         sendLog("New request:\n" +
                 "First bytes:\n" +
                 new String(buffer) + "\n");
@@ -205,12 +163,12 @@ public class BufferServer implements Runnable {
     }
 
 
-    public Thread pipe(String name, Socket clientSocket, Socket serverSocket, InputStream inputClient, OutputStream outputServer) {
+    protected static Thread pipe(String name, Socket clientSocket, Socket serverSocket, InputStream inputClient, OutputStream outputServer) {
         return pipe(name, clientSocket, serverSocket, inputClient, outputServer, null, -1);
     }
 
     //maybe should use pipedInputStream and pipedOutputStream
-    public Thread pipe(final String name, final Socket clientSocket, final Socket serverSocket, final InputStream in, final OutputStream out, final byte[] preBuffer, final int preBufferLen) {
+    protected static Thread pipe(final String name, final Socket clientSocket, final Socket serverSocket, final InputStream in, final OutputStream out, final byte[] preBuffer, final int preBufferLen) {
         //Buffer size 16384
         final Thread runner = new Thread(new Runnable() {
             public void run() {
@@ -233,6 +191,7 @@ public class BufferServer implements Runnable {
                             len = in.read(buffer);
                             //if there is data to write, write it to the OutputStream
                             if (len != -1) {
+                                    sendLog(new String(buffer));
                                     out.write(buffer, 0, len);
                             }
                             else {
@@ -277,7 +236,7 @@ public class BufferServer implements Runnable {
     }
 
 
-    private void sendLog(String output) {
+    protected static void sendLog(String output) {
         Log.d(TAG, output);
         Messenger.println(output);
     }

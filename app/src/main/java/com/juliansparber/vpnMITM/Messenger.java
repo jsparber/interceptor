@@ -45,6 +45,7 @@ public class Messenger {
             msg.obj = new String[]{title, body};
             msg.arg1 = blockerPort;
             mHandler.sendMessage(msg);
+
         }
     }
 

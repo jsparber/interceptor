@@ -76,12 +76,7 @@ public class LocalVPNService extends VpnService {
     public void startVPN() {
         isRunning = true;
         setupVPN();
-            try {
-                proxyServer = new BufferServer(0, 20);
-                proxyServer.start();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
         try {
             udpSelector = Selector.open();
             tcpSelector = Selector.open();
@@ -89,11 +84,14 @@ public class LocalVPNService extends VpnService {
             deviceToNetworkTCPQueue = new ConcurrentLinkedQueue<>();
             networkToDeviceQueue = new ConcurrentLinkedQueue<>();
 
-            executorService = Executors.newFixedThreadPool(6);
+            proxyServer = new BufferServer(0, 20);
+
+            executorService = Executors.newFixedThreadPool(7);
             executorService.submit(new UDPInput(networkToDeviceQueue, udpSelector));
             executorService.submit(new UDPOutput(deviceToNetworkUDPQueue, udpSelector, this));
             executorService.submit(new TCPInput(networkToDeviceQueue, tcpSelector));
             executorService.submit(new TCPOutput(deviceToNetworkTCPQueue, networkToDeviceQueue, tcpSelector, this));
+            executorService.submit(proxyServer);
             executorService.submit(new VPNOutput(vpnInterface.getFileDescriptor(), networkToDeviceQueue));
             executorService.submit(new VPNInput(vpnInterface.getFileDescriptor(), deviceToNetworkUDPQueue, deviceToNetworkTCPQueue));
             LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(BROADCAST_VPN_STATE).putExtra("running", true));
