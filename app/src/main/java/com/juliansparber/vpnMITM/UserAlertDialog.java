@@ -39,18 +39,25 @@ public class UserAlertDialog extends Activity{
             finish();
         }
         else {
-            String[] payload = getIntent().getStringArrayExtra(PAYLOAD);
-            if (payload.length > 2) {
+            final String[] payload = getIntent().getStringArrayExtra(PAYLOAD);
+            if (payload.length > 3) {
                 new AlertDialog.Builder(this)
                         .setTitle(payload[0])
                         .setMessage(payload[1] + getText(R.string.userQuestion))
-                        .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
+                        .setPositiveButton(R.string.permanentAllow, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                SharedProxyInfo.putAllowedConnections(payload[3], true);
+                                closeUserAlertDialog();
+                            }
+                        })
+                        .setNeutralButton(R.string.notNow, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
                                 closeUserAlertDialog();
                             }
                         })
-                        .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                        .setNegativeButton(R.string.permanentDisallow, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int which) {
+                                SharedProxyInfo.putAllowedConnections(payload[3], false);
                                 closeUserAlertDialog();
                             }
                         })
@@ -59,6 +66,12 @@ public class UserAlertDialog extends Activity{
             }
         }
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
 
     private void closeUserAlertDialog() {
         this.finish();

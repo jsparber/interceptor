@@ -8,7 +8,10 @@
     <string name="block_dialog_text">block traffic</string>
     <string name="cancel_dialog_text">cancel</string>
     <string name="dialog_text">Some text for a test dialog</string>
-    <string name="userQuestion">. \nDo you want to allow future traffic?</string>
+    <string name="userQuestion">\nDo you want to allow future traffic?</string>
     <string name="yes">Yes</string>
     <string name="no">No</string>
+    <string name="permanentDisallow">Never</string>
+    <string name="permanentAllow">Allow</string>
+    <string name="notNow">later</string>
 </resources>

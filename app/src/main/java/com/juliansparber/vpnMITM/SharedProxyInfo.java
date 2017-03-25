@@ -20,9 +20,9 @@ public class SharedProxyInfo {
         }
     }
 
-    public static void putAllowedConnections (String ipAndPort) {
+    public static void putAllowedConnections(String ipAndPort, boolean value) {
         synchronized (allowedConnections) {
-            allowedConnections.put(ipAndPort, true);
+            allowedConnections.put(ipAndPort, value);
         }
     }
 

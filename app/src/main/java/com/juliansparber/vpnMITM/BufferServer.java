@@ -82,6 +82,7 @@ public class BufferServer implements Runnable {
         InputStream inputServer = null;
         Socket serverSocket = null;
         Boolean allowTraffic = false;
+        Boolean blockTraffic = false;
 
         outputClient = clientSocket.getOutputStream();
         inputClient = clientSocket.getInputStream();
@@ -96,64 +97,72 @@ public class BufferServer implements Runnable {
         String originalHost = ipAndPort[0];
         int originalPort = Integer.parseInt(ipAndPort[1]);
         int sourcePort = Integer.parseInt(ipAndPort[3]);
-        if(SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null)
-            allowTraffic = true;
+        if(SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null) {
+            allowTraffic = SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
+            blockTraffic = !SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
+        }
 
-        if (!allowTraffic) {
-            Detector.updateReportMap();
-            HashMap<String, String> connLookup = Collector.provideConnectionLookup();
-            String packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+        if (!blockTraffic) {
+            if (!allowTraffic) {
+                Detector.updateReportMap();
+                HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+                String packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
 
-            //Create a ssl socket and try to perform handshake
-            try {
-                SSLBufferServer middleServer = new SSLBufferServer(originalHost, originalPort, packageName, this.vpnService);
-                middleServer.start();
-                //Connect to the SSLServer
-                serverSocket = new Socket("127.0.0.1", middleServer.getPort());
+                //Create a ssl socket and try to perform handshake
+                try {
+                    SSLBufferServer middleServer = new SSLBufferServer(originalHost, originalPort, packageName, this.vpnService);
+                    middleServer.start();
+                    //Connect to the SSLServer
+                    serverSocket = new Socket("127.0.0.1", middleServer.getPort());
+                    Log.d(TAG, "Protect server socket: " + vpnService.protect(serverSocket));
+                } catch (IOException e) {
+                    Log.d(TAG, e.toString());
+                }
+            } else {
+                serverSocket = new Socket(originalHost, originalPort);
                 Log.d(TAG, "Protect server socket: " + vpnService.protect(serverSocket));
-            } catch (IOException e) {
-                Log.d(TAG, e.toString());
             }
-        }
-        else {
-            serverSocket = new Socket(originalHost, originalPort);
-            Log.d(TAG, "Protect server socket: " + vpnService.protect(serverSocket));
-        }
 
         /*sendLog("New request:\n" +
                 "First bytes:\n" +
                 new String(buffer) + "\n");
                 */
 
-        outputServer = serverSocket.getOutputStream();
-        inputServer = serverSocket.getInputStream();
+            outputServer = serverSocket.getOutputStream();
+            inputServer = serverSocket.getInputStream();
 
-        //Create threads for the pipes
-        //from phone to middle
-        Thread oneWay = pipe("Pipe:phone->network", clientSocket, serverSocket, inputClient, outputServer, buffer, len);
-        //form middle to phone
-        Thread otherWay = pipe("Pipe:network->phone", clientSocket, serverSocket, inputServer, outputClient);
+            //Create threads for the pipes
+            //from phone to middle
+            Thread oneWay = pipe("Pipe:phone->network", clientSocket, serverSocket, inputClient, outputServer, buffer, len);
+            //form middle to phone
+            Thread otherWay = pipe("Pipe:network->phone", clientSocket, serverSocket, inputServer, outputClient);
 
-        oneWay.start();
-        otherWay.start();
+            oneWay.start();
+            otherWay.start();
 
-        //wait for the pipes to finish
-        try {
-            otherWay.join();
-            oneWay.join();
-            //Log.d(TAG+this.getPort(), "oneWay has joined");
-            // Log.d(TAG+this.getPort(), "otherWay has joined");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } finally {
-            //Should close sockets only if the client requests it
-            serverSocket.close();
-            clientSocket.close();
+            //wait for the pipes to finish
+            try {
+                otherWay.join();
+                oneWay.join();
+                //Log.d(TAG+this.getPort(), "oneWay has joined");
+                // Log.d(TAG+this.getPort(), "otherWay has joined");
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } finally {
+                //Should close sockets only if the client requests it
+                serverSocket.close();
+                clientSocket.close();
+            }
         }
-            /*
+        else {
+            //Block all traffic
+
             outputClient.write(("HTTP/1.1 403 Forbidden\n" +
                     "Content-Length: 1\n" +
                     "Connection: close\n\n\r").getBytes());
+            clientSocket.close();
+        }
+            /*
             dropTraffic(inputClient);
             outputClient.close();
             serverSocket.close();
