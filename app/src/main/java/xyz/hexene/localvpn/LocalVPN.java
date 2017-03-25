@@ -176,20 +176,11 @@ public class LocalVPN extends AppCompatActivity {
         logOutput.setText(logOutput.getText() + log);
     }
 
-
     //Show warning msg to user
     private void showWarningToUser (Message msg) {
         Intent intent = new Intent(this, UserAlertDialog.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
-        //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
-        String [] msg_to_show = (String[]) msg.obj;
-        intent.putExtra(UserAlertDialog.TITLE_TO_SHOW, msg_to_show[0]);
-        intent.putExtra(UserAlertDialog.BODY_TO_SHOW, msg_to_show[1]);
-        intent.putExtra(UserAlertDialog.APP, msg_to_show[2]);
-
-        //has to be the base Activity (don't know why)
-        //AppListActivity.getAppContext().startActivity(intent);
-        //AppListActivity.getAppContext().startActivity(F);
+        intent.putExtra(UserAlertDialog.PAYLOAD, (String [])msg.obj);
         startActivity(intent);
     }
 

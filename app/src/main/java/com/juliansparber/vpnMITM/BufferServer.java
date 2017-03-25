@@ -91,7 +91,6 @@ public class BufferServer implements Runnable {
         int len = 0;
         final byte[] buffer = new byte[100];
         len = inputClient.read(buffer);
-        //Log.d(TAG, "PORT: " + this.getPort());
 
         String[] ipAndPort = SharedProxyInfo.getPortRedirection(clientSocket.getPort()).split(":");
         String originalHost = ipAndPort[0];
@@ -126,20 +125,6 @@ public class BufferServer implements Runnable {
                 new String(buffer) + "\n");
                 */
 
-        /*TrafficBlocker blocker = new TrafficBlocker();
-        if (!sslConnection) {
-            sendLog("It's not a ssl connection witch is quite bad");
-            Messenger.showAlert("Bad news", "This app does not use SSL encryption. Should the traffic be blocked?", elementToRemove);
-            //wait for user interaction
-
-            synchronized (SharedProxyInfo.blocker) {
-                SharedProxyInfo.blocker.put(elementToRemove, blocker);
-            }
-            blocker.doWait();
-
-        }
-        */
-
         outputServer = serverSocket.getOutputStream();
         inputServer = serverSocket.getInputStream();
 
@@ -161,9 +146,9 @@ public class BufferServer implements Runnable {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-        //Should close sockets only if the client requests it
-           serverSocket.close();
-           clientSocket.close();
+            //Should close sockets only if the client requests it
+            serverSocket.close();
+            clientSocket.close();
         }
             /*
             outputClient.write(("HTTP/1.1 403 Forbidden\n" +
@@ -205,20 +190,20 @@ public class BufferServer implements Runnable {
                             len = in.read(buffer);
                             //if there is data to write, write it to the OutputStream
                             if (len != -1) {
-                                //                  sendLog(new String(buffer));
+                                //sendLog(new String(buffer));
                                 out.write(buffer, 0, len);
                             }
                             else {
-                                //               Log.d(TAG, name + "Should I close the socket?");
+                                //Log.d(TAG, name + "Should I close the socket?");
                                 error = true;
                             }
                         }
                     } catch (SocketException e) {
-                        Log.d(TAG,name + " Socket Exeption");
+                        Log.d(TAG,name + " Socket Exception");
                         Log.d(TAG, clientSocket.toString());
                         error = true;
                     } catch (NullPointerException e) {
-                        //close all conections actually should never happen
+                        //close all connections actually should never happen
                         if (in == null)
                             Log.d(TAG, "Server has closed socked");
                         else if (out == null)
@@ -230,7 +215,7 @@ public class BufferServer implements Runnable {
                         e.printStackTrace();
                         error = true;
                     } catch (ArrayIndexOutOfBoundsException e) {
-                        //output conection is closed
+                        //output confection is closed
                         e.printStackTrace();
                         error = true;
                     }

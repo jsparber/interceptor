@@ -17,9 +17,7 @@ import xyz.hexene.localvpn.LocalVPN;
 
 
 public class UserAlertDialog extends Activity{
-    public static final String TITLE_TO_SHOW = "title";
-    public static final String BODY_TO_SHOW = "body";
-    public static final String APP = "app";
+    public static final String PAYLOAD = "payload";
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -41,21 +39,24 @@ public class UserAlertDialog extends Activity{
             finish();
         }
         else {
-            new AlertDialog.Builder(this)
-                    .setTitle(getIntent().getStringExtra(TITLE_TO_SHOW))
-                    .setMessage(getIntent().getStringExtra(BODY_TO_SHOW) + getText(R.string.userQuestion))
-                    .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            closeUserAlertDialog();
-                        }
-                    })
-                    .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
-                        public void onClick(DialogInterface dialog, int which) {
-                            closeUserAlertDialog();
-                        }
-                    })
-                    .setIcon(new AppInfo(getIntent().getStringExtra(APP)).icon)
-                    .show();
+            String[] payload = getIntent().getStringArrayExtra(PAYLOAD);
+            if (payload.length > 2) {
+                new AlertDialog.Builder(this)
+                        .setTitle(payload[0])
+                        .setMessage(payload[1] + getText(R.string.userQuestion))
+                        .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                closeUserAlertDialog();
+                            }
+                        })
+                        .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                closeUserAlertDialog();
+                            }
+                        })
+                        .setIcon(new AppInfo(payload[2]).icon)
+                        .show();
+            }
         }
     }
 

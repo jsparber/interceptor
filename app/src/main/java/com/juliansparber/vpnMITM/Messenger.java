@@ -38,12 +38,11 @@ public class Messenger {
         }
     }
 
-    public static void showAlert(String title, String body, String app, int blockerPort) {
+    public static void showAlert(String[] payload) {
         if (mHandler != null) {
             Message msg = Message.obtain();
             msg.what = ALERT_DIALOG;
-            msg.obj = new String[]{title, body, app};
-            msg.arg1 = blockerPort;
+            msg.obj = payload;
             mHandler.sendMessage(msg);
 
         }
