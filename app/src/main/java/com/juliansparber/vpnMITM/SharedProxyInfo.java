@@ -7,9 +7,35 @@ import java.util.HashMap;
  */
 
 public class SharedProxyInfo {
+    //TO-DO remove elements form when they are not anymore needed
     //PORT, proxy object
-    public static HashMap<Integer, String> portRedirection = new HashMap<>();
-    public static HashMap<Integer, TrafficBlocker> blocker = new HashMap<Integer, TrafficBlocker>();
-    public SharedProxyInfo() {
+    private static HashMap<Integer, String> portRedirection = new HashMap<>();
+    //IP:PORT -> [true|false]
+    private static HashMap<String, Boolean> allowedConnections = new HashMap<String, Boolean>();
+    //private static HashMap<String, Boolean> allowedApps = new HashMap<String, Boolean>();
+
+    public static Boolean getAllowedConnections (String ipAndPort) {
+        synchronized (allowedConnections) {
+            return allowedConnections.get(ipAndPort);
+        }
     }
+
+    public static void putAllowedConnections (String ipAndPort) {
+        synchronized (allowedConnections) {
+            allowedConnections.put(ipAndPort, true);
+        }
+    }
+
+    public static String getPortRedirection (int port) {
+        synchronized (portRedirection) {
+            return portRedirection.get(port);
+        }
+    }
+
+    public static void putPortRedirection (int port, String ipAndPort) {
+        synchronized (portRedirection) {
+            portRedirection.put(port, ipAndPort);
+        }
+    }
+
 }

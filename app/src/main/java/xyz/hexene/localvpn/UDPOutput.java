@@ -21,6 +21,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
@@ -83,9 +84,14 @@ public class UDPOutput implements Runnable
                 int sourcePort = currentPacket.udpHeader.sourcePort;
 
                 String ipAndPort = destinationAddress.getHostAddress() + ":" + destinationPort + ":" + sourcePort;
+
                 DatagramChannel outputChannel = channelCache.get(ipAndPort);
                 if (outputChannel == null) {
-                    outputChannel = DatagramChannel.open();
+                    try {
+                        outputChannel = DatagramChannel.open();
+                    } catch (SocketException e) {
+                        Log.e(TAG, "SocketException: " + ipAndPort, e);
+                    }
                     try
                     {
                         outputChannel.connect(new InetSocketAddress(destinationAddress, destinationPort));

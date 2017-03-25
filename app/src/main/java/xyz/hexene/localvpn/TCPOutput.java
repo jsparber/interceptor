@@ -16,15 +16,15 @@
 
 package xyz.hexene.localvpn;
 
-import android.os.Build;
 import android.util.Log;
 
 import com.juliansparber.vpnMITM.SharedProxyInfo;
 
+import org.secuso.privacyfriendlynetmonitor.ConnectionAnalysis.Collector;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import xyz.hexene.localvpn.Packet.TCPHeader;
 import xyz.hexene.localvpn.TCB.TCBStatus;
+
 //Traffic from the device to the network
 public class TCPOutput implements Runnable
 {
@@ -131,11 +132,13 @@ public class TCPOutput implements Runnable
         {
             SocketChannel outputChannel = SocketChannel.open();
             outputChannel.configureBlocking(false);
-            vpnService.protect(outputChannel.socket());
             outputChannel.socket().bind(null);
+            vpnService.protect(outputChannel.socket());
 
-            SharedProxyInfo.portRedirection.put(outputChannel.socket().getLocalPort(),
-                    currentPacket.ip4Header.originalDestinationAddress + ":" + currentPacket.tcpHeader.originalDestinationPort);
+            Collector.provideConnectionLookup();
+            SharedProxyInfo.putPortRedirection(outputChannel.socket().getLocalPort(),
+                    //destinationPort is acctualy the source port it gets swap (don't know why)
+                    currentPacket.ip4Header.originalDestinationAddress.getHostAddress() + ":" + currentPacket.tcpHeader.originalDestinationPort + ":" + currentPacket.tcpHeader.sourcePort + ":" + currentPacket.tcpHeader.destinationPort);
 
             TCB tcb = new TCB(ipAndPort, random.nextInt(Short.MAX_VALUE + 1), tcpHeader.sequenceNumber, tcpHeader.sequenceNumber + 1,
                     tcpHeader.acknowledgementNumber, outputChannel, currentPacket);

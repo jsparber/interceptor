@@ -12,15 +12,14 @@ import android.app.Activity;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.ViewGroup;
-import android.view.Window;
 
-import be.brunoparmentier.apkshare.AppListActivity;
 import xyz.hexene.localvpn.LocalVPN;
+
 
 public class UserAlertDialog extends Activity{
     public static final String TITLE_TO_SHOW = "title";
     public static final String BODY_TO_SHOW = "body";
-    public static final String BLOCKER_PORT = "blocker_port";
+    public static final String APP = "app";
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
@@ -36,39 +35,26 @@ public class UserAlertDialog extends Activity{
 
         int flags = getIntent().getFlags();
         if ((flags & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
-            Log.d("TAG", "Lanched from history");
+            Log.d("TAG", "Launched from history");
             Intent intent = new Intent(this, LocalVPN.class);
             startActivity(intent);
             finish();
         }
         else {
-
             new AlertDialog.Builder(this)
                     .setTitle(getIntent().getStringExtra(TITLE_TO_SHOW))
-                    .setMessage(getIntent().getStringExtra(BODY_TO_SHOW))
-                    .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+                    .setMessage(getIntent().getStringExtra(BODY_TO_SHOW) + getText(R.string.userQuestion))
+                    .setPositiveButton(R.string.yes, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             closeUserAlertDialog();
-                            int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
-                            try {
-                                SharedProxyInfo.blocker.get(elementToRemove).doNotify(true);
-                            } catch (NullPointerException e) {
-
-                            }
                         }
                     })
-                    .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
+                    .setNegativeButton(R.string.no, new DialogInterface.OnClickListener() {
                         public void onClick(DialogInterface dialog, int which) {
                             closeUserAlertDialog();
-                            int elementToRemove = getIntent().getIntExtra(BLOCKER_PORT, 0);
-                            try {
-                                SharedProxyInfo.blocker.get(elementToRemove).doNotify(false);
-                            } catch (NullPointerException e) {
-
-                            }
                         }
                     })
-                    .setIcon(android.R.drawable.ic_dialog_alert)
+                    .setIcon(new AppInfo(getIntent().getStringExtra(APP)).icon)
                     .show();
         }
     }

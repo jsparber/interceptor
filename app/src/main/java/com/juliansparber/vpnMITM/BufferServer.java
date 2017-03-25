@@ -3,6 +3,9 @@ package com.juliansparber.vpnMITM;
 import android.util.Log;
 
 
+import org.secuso.privacyfriendlynetmonitor.ConnectionAnalysis.Collector;
+import org.secuso.privacyfriendlynetmonitor.ConnectionAnalysis.Detector;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -11,9 +14,13 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import xyz.hexene.localvpn.LocalVPNService;
+import xyz.hexene.localvpn.Packet;
 import xyz.hexene.localvpn.TCB;
 
 public class BufferServer implements Runnable {
@@ -21,13 +28,15 @@ public class BufferServer implements Runnable {
     private static final String TAG = BufferServer.class.getSimpleName();
     private final ExecutorService pool;
     protected final ServerSocket mServerSocket;
+    private LocalVPNService vpnService;
 
     /**
      * WebServer constructor.
      */
-    public BufferServer(int port, int poolSize) throws IOException {
+    public BufferServer(int port, int poolSize, LocalVPNService localVPNService) throws IOException {
         this.mServerSocket = new ServerSocket(port);
         this.pool = Executors.newFixedThreadPool(poolSize);
+        this.vpnService = localVPNService;
     }
 
     public int getPort() {
@@ -72,12 +81,11 @@ public class BufferServer implements Runnable {
         OutputStream outputServer = null;
         InputStream inputServer = null;
         Socket serverSocket = null;
-        Boolean sslConnection = false;
+        Boolean allowTraffic = false;
 
         outputClient = clientSocket.getOutputStream();
         inputClient = clientSocket.getInputStream();
 
-        sslConnection = false;
 
         //Read first bytes of message
         int len = 0;
@@ -85,32 +93,38 @@ public class BufferServer implements Runnable {
         len = inputClient.read(buffer);
         //Log.d(TAG, "PORT: " + this.getPort());
 
-        int port = ((InetSocketAddress) clientSocket.getRemoteSocketAddress()).getPort();
-        String tmp = SharedProxyInfo.portRedirection.get(clientSocket.getPort());
-        String originalHost = tmp.split(":")[0].substring(1);
-        int originalPort = Integer.parseInt(tmp.split(":")[1]);
+        String[] ipAndPort = SharedProxyInfo.getPortRedirection(clientSocket.getPort()).split(":");
+        String originalHost = ipAndPort[0];
+        int originalPort = Integer.parseInt(ipAndPort[1]);
+        int sourcePort = Integer.parseInt(ipAndPort[3]);
+        if(SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null)
+            allowTraffic = true;
 
-        //Create a ssl socket and try to perform handshake
-        try {
-            SSLBufferServer middleServer = new SSLBufferServer(originalHost, originalPort);
-            middleServer.start();
-            //Connect to the SSLServer
-            serverSocket = new Socket("127.0.0.1", middleServer.getPort());
-        } catch (IOException e) {
-            Log.d(TAG, e.toString());
+        if (!allowTraffic) {
+            Detector.updateReportMap();
+            HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+            String packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+
+            //Create a ssl socket and try to perform handshake
+            try {
+                SSLBufferServer middleServer = new SSLBufferServer(originalHost, originalPort, packageName, this.vpnService);
+                middleServer.start();
+                //Connect to the SSLServer
+                serverSocket = new Socket("127.0.0.1", middleServer.getPort());
+                Log.d(TAG, "Protect server socket: " + vpnService.protect(serverSocket));
+            } catch (IOException e) {
+                Log.d(TAG, e.toString());
+            }
+        }
+        else {
+            serverSocket = new Socket(originalHost, originalPort);
+            Log.d(TAG, "Protect server socket: " + vpnService.protect(serverSocket));
         }
 
-        //When SSL handshake fails because it is not ssl traffic create a normal socket and
-        // inject the first bytes which are read from inputStream for the SSL handshake
-        //
-        if (tmp != null) {
-            //serverSocket = new Socket(tmp.split(":")[0].substring(1), Integer.parseInt(tmp.split(":")[1]));
-        }
-
-        sendLog("New request:\n" +
+        /*sendLog("New request:\n" +
                 "First bytes:\n" +
                 new String(buffer) + "\n");
-
+                */
 
         /*TrafficBlocker blocker = new TrafficBlocker();
         if (!sslConnection) {
@@ -146,11 +160,11 @@ public class BufferServer implements Runnable {
             // Log.d(TAG+this.getPort(), "otherWay has joined");
         } catch (InterruptedException e) {
             e.printStackTrace();
-        }// finally {
+        } finally {
         //Should close sockets only if the client requests it
-        //   serverSocket.close();
-        //   clientSocket.close();
-        //}
+           serverSocket.close();
+           clientSocket.close();
+        }
             /*
             outputClient.write(("HTTP/1.1 403 Forbidden\n" +
                     "Content-Length: 1\n" +
@@ -172,7 +186,7 @@ public class BufferServer implements Runnable {
         //Buffer size 16384
         final Thread runner = new Thread(new Runnable() {
             public void run() {
-                Log.d(TAG, name + "Start pipe");
+                //Log.d(TAG, name + "Start pipe");
                 byte[] buffer = new byte[2000];
                 boolean error = false;
                 //write cached first Bytes to the outputStream
@@ -191,11 +205,11 @@ public class BufferServer implements Runnable {
                             len = in.read(buffer);
                             //if there is data to write, write it to the OutputStream
                             if (len != -1) {
-                                    sendLog(new String(buffer));
-                                    out.write(buffer, 0, len);
+                                //                  sendLog(new String(buffer));
+                                out.write(buffer, 0, len);
                             }
                             else {
-                                Log.d(TAG, name + "Should I close the socket?");
+                                //               Log.d(TAG, name + "Should I close the socket?");
                                 error = true;
                             }
                         }

@@ -36,11 +36,12 @@ import com.juliansparber.vpnMITM.Messenger;
 import com.juliansparber.vpnMITM.R;
 import com.juliansparber.vpnMITM.UserAlertDialog;
 
-import be.brunoparmentier.apkshare.AppListActivity;
+import org.secuso.privacyfriendlynetmonitor.Assistant.RunStore;
 
 
 public class LocalVPN extends AppCompatActivity {
     private static final int VPN_REQUEST_CODE = 0x0F;
+    private static final String TAG = LocalVPN.class.getSimpleName();
 
     private boolean waitingForVPNStart;
     private String appToTest;
@@ -83,6 +84,8 @@ public class LocalVPN extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         this.context = getApplicationContext();
+        RunStore.setAppContext(this.context);
+        RunStore.setContext(this);
         setContentView(R.layout.activity_local_vpn);
         waitingForVPNStart = false;
         Intent intent = getIntent();
@@ -116,9 +119,14 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void startVPN() {
+        //startConnectionLogger();
         //Messenger.clear();
-        Messenger.println("Start test for " + appToTestName + "...");
-        Messenger.println("Go to " + appToTestName);
+        if (appToTest != null) {
+            Messenger.println("Start test for " + appToTestName + "...");
+            Messenger.println("Go to " + appToTestName);
+        }
+        else
+            Messenger.println("Start test for all apps...");
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
@@ -127,6 +135,7 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void stopVPN() {
+        //stopConnectionLogger();
         if (LocalVPNService.isRunning()) {
             Messenger.clear();
             final TextView logOutput = (TextView) findViewById(R.id.logOutput);
@@ -148,8 +157,9 @@ public class LocalVPN extends AppCompatActivity {
 
             Intent startIntent = new Intent(this, LocalVPNService.class);
             //startIntent.putExtra("testApp", "com.termux");
-            Log.d("TAG", "AppToTest" + appToTest);
+            Log.d(TAG, "AppToTest " + appToTest);
             startIntent.putExtra("testApp", appToTest);
+            startIntent.putExtra("cmd", "start");
             startService(startIntent);
             changeButton();
         }
@@ -169,13 +179,13 @@ public class LocalVPN extends AppCompatActivity {
 
     //Show warning msg to user
     private void showWarningToUser (Message msg) {
-        Intent intent = new Intent(AppListActivity.getAppContext(), UserAlertDialog.class);
+        Intent intent = new Intent(this, UserAlertDialog.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
         //intent.putExtra(DialogActivity.EXTRA_SOME_PARAM, someParamValue);
         String [] msg_to_show = (String[]) msg.obj;
         intent.putExtra(UserAlertDialog.TITLE_TO_SHOW, msg_to_show[0]);
         intent.putExtra(UserAlertDialog.BODY_TO_SHOW, msg_to_show[1]);
-        intent.putExtra(UserAlertDialog.BLOCKER_PORT, msg.arg1);
+        intent.putExtra(UserAlertDialog.APP, msg_to_show[2]);
 
         //has to be the base Activity (don't know why)
         //AppListActivity.getAppContext().startActivity(intent);

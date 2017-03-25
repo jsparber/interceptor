@@ -350,7 +350,7 @@ public class Packet
 
         public int sourcePort;
         public int destinationPort;
-        public int originalDestinationPort;
+        public int originalDestinationPort = 0;
 
         public long sequenceNumber;
         public long acknowledgementNumber;
@@ -421,8 +421,10 @@ public class Packet
 
         private void fillHeader(ByteBuffer buffer)
         {
-            //buffer.putShort((short) sourcePort);
-            buffer.putShort((short) originalDestinationPort);
+            if (originalDestinationPort != 0)
+                buffer.putShort((short) originalDestinationPort);
+            else
+                buffer.putShort((short) sourcePort);
             buffer.putShort((short) destinationPort);
 
             buffer.putInt((int) sequenceNumber);
