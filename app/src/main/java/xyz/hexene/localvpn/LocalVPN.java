@@ -21,10 +21,10 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.VpnService;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v4.content.LocalBroadcastManager;
-import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -38,17 +38,12 @@ import com.juliansparber.vpnMITM.UserAlertDialog;
 
 import org.secuso.privacyfriendlynetmonitor.Assistant.RunStore;
 
-
 public class LocalVPN extends AppCompatActivity {
     private static final int VPN_REQUEST_CODE = 0x0F;
     private static final String TAG = LocalVPN.class.getSimpleName();
 
     private boolean waitingForVPNStart;
-    private String appToTest;
-    private String appToTestName;
     private static Context context;
-
-    static private BufferServer server = null;
 
     private BroadcastReceiver vpnStateReceiver = new BroadcastReceiver() {
 
@@ -83,14 +78,12 @@ public class LocalVPN extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        this.context = getApplicationContext();
-        RunStore.setAppContext(this.context);
+        context = getApplicationContext();
+        RunStore.setAppContext(context);
         RunStore.setContext(this);
         setContentView(R.layout.activity_local_vpn);
         waitingForVPNStart = false;
         Intent intent = getIntent();
-        appToTest = intent.getStringExtra("appToTest");
-        appToTestName = intent.getStringExtra("appToTestName");
 
         LocalBroadcastManager.getInstance(this).registerReceiver(vpnStateReceiver,
                 new IntentFilter(LocalVPNService.BROADCAST_VPN_STATE));
@@ -105,28 +98,14 @@ public class LocalVPN extends AppCompatActivity {
     public void buttonOnClick(View v) {
         if (!LocalVPNService.isRunning() && !waitingForVPNStart) {
             startVPN();
-
-            //           BufferServer server = null;
-            //server = new BufferServer(8080, InetAddress.getByName("109.68.230.138"), 80);
-//            server.start();
-            //should be a service instate of a thread
-            //server = new BufferServer(8080, mHandler);
-            //server.start();
         } else {
             stopVPN();
-            //server.stop();
         }
     }
 
     private void startVPN() {
-        //startConnectionLogger();
-        //Messenger.clear();
-        if (appToTest != null) {
-            Messenger.println("Start test for " + appToTestName + "...");
-            Messenger.println("Go to " + appToTestName);
-        }
-        else
-            Messenger.println("Start test for all apps...");
+        Messenger.clear();
+        Messenger.println("Start test for all apps...");
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
@@ -135,7 +114,6 @@ public class LocalVPN extends AppCompatActivity {
     }
 
     private void stopVPN() {
-        //stopConnectionLogger();
         if (LocalVPNService.isRunning()) {
             Messenger.clear();
             final TextView logOutput = (TextView) findViewById(R.id.logOutput);
@@ -143,7 +121,6 @@ public class LocalVPN extends AppCompatActivity {
             Intent stopIntent = new Intent(this, LocalVPNService.class);
             stopIntent.putExtra("cmd", "stop");
             startService(stopIntent);
-            //stopService(new Intent(this, LocalVPNService.class));
             changeButton();
             Messenger.println("VPN  stopped");
         }
@@ -154,11 +131,7 @@ public class LocalVPN extends AppCompatActivity {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
             waitingForVPNStart = true;
-
             Intent startIntent = new Intent(this, LocalVPNService.class);
-            //startIntent.putExtra("testApp", "com.termux");
-            Log.d(TAG, "AppToTest " + appToTest);
-            startIntent.putExtra("testApp", appToTest);
             startIntent.putExtra("cmd", "start");
             startService(startIntent);
             changeButton();

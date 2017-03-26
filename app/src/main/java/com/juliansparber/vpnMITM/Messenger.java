@@ -9,7 +9,6 @@ import android.os.Message;
  */
 
 
-
 public class Messenger {
     private static Handler mHandler = null;
     private static String outputLog = "";

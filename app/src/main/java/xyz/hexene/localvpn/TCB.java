@@ -16,8 +16,6 @@
 
 package xyz.hexene.localvpn;
 
-import com.juliansparber.vpnMITM.SharedProxyInfo;
-
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;

@@ -1,28 +1,27 @@
 package com.juliansparber.vpnMITM;
 
-import android.app.ActivityManager;
+import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.Build;
 import android.os.Bundle;
-
-import android.app.Activity;
-import android.support.annotation.RequiresApi;
 import android.util.Log;
 import android.view.ViewGroup;
+
+import java.util.ArrayList;
 
 import xyz.hexene.localvpn.LocalVPN;
 
 
-public class UserAlertDialog extends Activity{
+
+public class UserAlertDialog extends Activity {
     public static final String PAYLOAD = "payload";
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private ArrayList<Intent> intentCache = new ArrayList<>();
+    private AlertDialog currentAlert;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-// TODO Auto-generated method stub
         super.onCreate(savedInstanceState);
         //requestWindowFeature(Window.FEATURE_NO_TITLE);
         //setContentView(R.layout.activity_user_alert_dialog);
@@ -37,44 +36,77 @@ public class UserAlertDialog extends Activity{
             Intent intent = new Intent(this, LocalVPN.class);
             startActivity(intent);
             finish();
-        }
-        else {
+        } else {
             final String[] payload = getIntent().getStringArrayExtra(PAYLOAD);
             if (payload.length > 3) {
-                new AlertDialog.Builder(this)
-                        .setTitle(payload[0])
-                        .setMessage(payload[1] + getText(R.string.userQuestion))
-                        .setPositiveButton(R.string.permanentAllow, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                SharedProxyInfo.putAllowedConnections(payload[3], true);
-                                closeUserAlertDialog();
-                            }
-                        })
-                        .setNeutralButton(R.string.notNow, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                closeUserAlertDialog();
-                            }
-                        })
-                        .setNegativeButton(R.string.permanentDisallow, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int which) {
-                                SharedProxyInfo.putAllowedConnections(payload[3], false);
-                                closeUserAlertDialog();
-                            }
-                        })
-                        .setIcon(new AppInfo(payload[2]).icon)
-                        .show();
+                creareAlert(payload);
             }
         }
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStop() {
+        super.onStop();
+        if (currentAlert != null) {
+            currentAlert.dismiss();
+            closeUserAlertDialog();
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    protected void onNewIntent(Intent intent) {
+        intentCache.add(intent);
+    }
+
+    private void creareAlert(final String[] payload) {
+        currentAlert = new AlertDialog.Builder(this)
+                .setTitle(payload[0])
+                .setMessage(payload[1] + getText(R.string.userQuestion))
+                .setPositiveButton(R.string.permanentAllow, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        SharedProxyInfo.putAllowedConnections(payload[3], true);
+                        closeUserAlertDialog();
+                    }
+                })
+                .setNeutralButton(R.string.notNow, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        closeUserAlertDialog();
+                    }
+                })
+                .setNegativeButton(R.string.permanentDisallow, new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        SharedProxyInfo.putAllowedConnections(payload[3], false);
+                        closeUserAlertDialog();
+                    }
+                })
+                .setIcon(new AppInfo(payload[2]).icon)
+                .show();
+        currentAlert.setOnDismissListener(new DialogInterface.OnDismissListener() {
+            @Override
+            public void onDismiss(DialogInterface dialog) {
+                closeUserAlertDialog();
+            }
+        });
     }
 
 
     private void closeUserAlertDialog() {
-        this.finish();
-        this.overridePendingTransition(0, 0);
+        currentAlert = null;
+        if (!intentCache.isEmpty()) {
+            final String[] payload = intentCache.get(0).getStringArrayExtra(PAYLOAD);
+            if (payload.length > 3) {
+                creareAlert(payload);
+            }
+            intentCache.remove(0);
+        }
+        else {
+            this.finish();
+            //moveTaskToBack(true);
+            this.overridePendingTransition(0, 0);
+        }
     }
 }

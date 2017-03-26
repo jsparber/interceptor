@@ -7,21 +7,23 @@ package com.juliansparber.vpnMITM;
 
 public class TrafficBlocker {
     public boolean blockTraffic;
+
     public TrafficBlocker() {
         blockTraffic = false;
     }
-    public void doWait(){
-        synchronized(this){
-            try{
+
+    public void doWait() {
+        synchronized (this) {
+            try {
                 this.wait();
-            } catch(InterruptedException e){
+            } catch (InterruptedException e) {
 
             }
         }
     }
 
-    public void doNotify(boolean blocker){
-        synchronized(this){
+    public void doNotify(boolean blocker) {
+        synchronized (this) {
             this.blockTraffic = blocker;
             this.notify();
         }

@@ -54,7 +54,6 @@ import android.os.Build;
 import android.support.compat.BuildConfig;
 import android.util.Log;
 
-import org.secuso.privacyfriendlynetmonitor.Assistant.Const;
 import org.secuso.privacyfriendlynetmonitor.Assistant.KnownPorts;
 import org.secuso.privacyfriendlynetmonitor.Assistant.RunStore;
 import org.secuso.privacyfriendlynetmonitor.Assistant.TLType;
@@ -234,26 +233,16 @@ public class Collector {
     }
 
     //Make an async reverse DNS request
-    public static void resolveHosts() {
+    /*public static void resolveHosts() {
         for (int i = 0; i < sReportList.size(); i++){
             Report r = sReportList.get(i);
             if (!hasHostName(r.remoteAdd.getHostAddress())) {
-                try {
                     String hostName = r.remoteAdd.getHostName();
                     sCacheDNS.put(r.remoteAdd.getHostAddress(), hostName);
-                    if (Const.IS_DEBUG){
-                        Log.d("ReverseDNS", "Reverse DNS for " + r.remoteAdd.getHostAddress()
-                                + hostName);
-                    }
-                } catch (RuntimeException e) {
-                    if (Const.IS_DEBUG) {
-                        Log.e(Const.LOG_TAG, "Attempt to resolve host name failed");
-                        e.printStackTrace();
-                    }
-                }
             }
         }
     }
+    */
 
     // fill reports with app data from Package Information Cache
     private static void fillPackageInformation() {
@@ -296,7 +285,6 @@ public class Collector {
     //Updates the PkgInfo hash map with new entries.
     private static void updatePackageCache() {
         sCachePackage = new HashMap<>();
-        if(Const.IS_DEBUG){ printAllPackages(); }
         ArrayList<PackageInfo> infoList = (ArrayList<PackageInfo>) getPackages(RunStore.getContext());
         for (PackageInfo i : infoList) {
             if (i != null) {
@@ -325,32 +313,6 @@ public class Collector {
         synchronized (context.getApplicationContext()) {
                 PackageManager pm = context.getPackageManager();
             return new ArrayList<>(pm.getInstalledPackages(0));
-        }
-    }
-
-    //debug print: Print all reachable active processes
-    private static void printAllPackages() {
-            ArrayList<PackageInfo> infoList = (ArrayList<PackageInfo>) getPackages(RunStore.getContext());
-            for (PackageInfo i : infoList) {
-                Log.d(Const.LOG_TAG, i.packageName + " uid_" + i.applicationInfo.uid);
-            }
-    }
-
-    //Provides app icon for activities
-    public static Drawable getIcon(int uid){
-        try {
-            if (!sCacheIcon.containsKey(uid)) {
-                if (sCachePackage.containsKey(uid)) {
-                    sCacheIcon.put(uid, sCachePackage.get(uid).applicationInfo.
-                            loadIcon(RunStore.getContext().getPackageManager()));
-                } else {
-                    return getDefaultIcon();
-                }
-            }
-            return sCacheIcon.get(uid);
-        } catch(NullPointerException e){
-            Log.e(Const.LOG_TAG, "Could not load icon of: " + sCachePackage.get(uid).packageName);
-            return getDefaultIcon();
         }
     }
 

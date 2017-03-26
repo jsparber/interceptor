@@ -45,7 +45,6 @@
 
 package org.secuso.privacyfriendlynetmonitor.Assistant;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.util.Log;
 

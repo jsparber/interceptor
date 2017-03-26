@@ -62,14 +62,14 @@ public class SSLBufferServer implements Runnable {
         char keystorepass[] = "password".toCharArray();
         char keypassword[] = "password".toCharArray();
 
-        try{
+        try {
             String keyStoreType = KeyStore.getDefaultType();
             KeyStore keyStore = KeyStore.getInstance(keyStoreType);
 
             keyStore.load(keyfile, keystorepass);
 
-            String keyalg=KeyManagerFactory.getDefaultAlgorithm();
-            KeyManagerFactory kmf=KeyManagerFactory.getInstance(keyalg);
+            String keyalg = KeyManagerFactory.getDefaultAlgorithm();
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance(keyalg);
 
             kmf.init(keyStore, keypassword);
             KeyManager[] km = kmf.getKeyManagers();
@@ -91,7 +91,7 @@ public class SSLBufferServer implements Runnable {
             res.setUseClientMode(false);
             return res;
 
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
@@ -196,8 +196,7 @@ public class SSLBufferServer implements Runnable {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
-        else {
+        } else {
             try {
                 serverSocket.close();
                 clientSocket.close();
@@ -236,12 +235,10 @@ public class SSLBufferServer implements Runnable {
         if (e == null) {
             title = "Bad news";
             body = app + " uses a SSL connection which accepts invalid certificates";
-        }
-        else if(e.getCause() == null) {
+        } else if (e.getCause() == null) {
             title = "Unknown Error";
             body = app + ": " + e.getMessage();
-        }
-        else {
+        } else {
             if (e.getCause().getMessage().contains("ALERT_UNKNOWN_CA")) {
                 title = "Good news";
                 body = app + " does not accept invalid certificates.";
@@ -255,14 +252,13 @@ public class SSLBufferServer implements Runnable {
             } else if (e.getCause().getMessage().contains("HTTP_REQUEST")) {
                 title = "Bad news";
                 body = app + " does use plane http without encryption.";
-            }
-            else {
-                title ="Unknown Error";
+            } else {
+                title = "Unknown Error";
                 body = app + ": " + e.getMessage();
             }
         }
         body += "\nConnection to " + destHost + ":" + destPort;
-        return new String[] {title, body};
+        return new String[]{title, body};
     }
 
 

@@ -8,10 +8,6 @@
         android:targetSdkVersion="24" />
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
         android:allowBackup="true"
@@ -27,6 +23,13 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".UserAlertDialog"
+            android:theme="@style/noAnimTheme"
+            android:launchMode="singleInstance"
+            tools:targetApi="lollipop">
+        </activity>
+
         <service
             android:name="xyz.hexene.localvpn.LocalVPNService"
             android:enabled="true"
@@ -36,14 +39,5 @@
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
-
-        <activity
-            android:name=".UserAlertDialog"
-            android:theme="@style/noAnimTheme"
-            android:launchMode="singleInstance"
-            tools:targetApi="lollipop">
-        </activity>
-
     </application>
-
 </manifest>

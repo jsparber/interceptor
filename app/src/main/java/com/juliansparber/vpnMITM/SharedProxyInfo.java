@@ -14,7 +14,7 @@ public class SharedProxyInfo {
     private static HashMap<String, Boolean> allowedConnections = new HashMap<String, Boolean>();
     //private static HashMap<String, Boolean> allowedApps = new HashMap<String, Boolean>();
 
-    public static Boolean getAllowedConnections (String ipAndPort) {
+    public static Boolean getAllowedConnections(String ipAndPort) {
         synchronized (allowedConnections) {
             return allowedConnections.get(ipAndPort);
         }
@@ -26,13 +26,13 @@ public class SharedProxyInfo {
         }
     }
 
-    public static String getPortRedirection (int port) {
+    public static String getPortRedirection(int port) {
         synchronized (portRedirection) {
             return portRedirection.get(port);
         }
     }
 
-    public static void putPortRedirection (int port, String ipAndPort) {
+    public static void putPortRedirection(int port, String ipAndPort) {
         synchronized (portRedirection) {
             portRedirection.put(port, ipAndPort);
         }

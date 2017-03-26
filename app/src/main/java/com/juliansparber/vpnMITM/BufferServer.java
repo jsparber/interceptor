@@ -2,26 +2,20 @@ package com.juliansparber.vpnMITM;
 
 import android.util.Log;
 
-
 import org.secuso.privacyfriendlynetmonitor.ConnectionAnalysis.Collector;
 import org.secuso.privacyfriendlynetmonitor.ConnectionAnalysis.Detector;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashMap;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import xyz.hexene.localvpn.LocalVPNService;
-import xyz.hexene.localvpn.Packet;
-import xyz.hexene.localvpn.TCB;
 
 public class BufferServer implements Runnable {
 
@@ -46,7 +40,7 @@ public class BufferServer implements Runnable {
     @Override
     public void run() { // run the service
         try {
-            for (;;) {
+            for (; ; ) {
                 pool.execute(new Handler(mServerSocket.accept()));
             }
         } catch (IOException ex) {
@@ -97,7 +91,7 @@ public class BufferServer implements Runnable {
         String originalHost = ipAndPort[0];
         int originalPort = Integer.parseInt(ipAndPort[1]);
         int sourcePort = Integer.parseInt(ipAndPort[3]);
-        if(SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null) {
+        if (SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null) {
             allowTraffic = SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
             blockTraffic = !SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
         }
@@ -153,8 +147,7 @@ public class BufferServer implements Runnable {
                 serverSocket.close();
                 clientSocket.close();
             }
-        }
-        else {
+        } else {
             //Block all traffic
 
             outputClient.write(("HTTP/1.1 403 Forbidden\n" +
@@ -201,14 +194,13 @@ public class BufferServer implements Runnable {
                             if (len != -1) {
                                 //sendLog(new String(buffer));
                                 out.write(buffer, 0, len);
-                            }
-                            else {
+                            } else {
                                 //Log.d(TAG, name + "Should I close the socket?");
                                 error = true;
                             }
                         }
                     } catch (SocketException e) {
-                        Log.d(TAG,name + " Socket Exception");
+                        Log.d(TAG, name + " Socket Exception");
                         Log.d(TAG, clientSocket.toString());
                         error = true;
                     } catch (NullPointerException e) {

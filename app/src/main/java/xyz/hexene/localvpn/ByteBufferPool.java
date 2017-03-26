@@ -17,7 +17,6 @@
 package xyz.hexene.localvpn;
 
 import java.nio.ByteBuffer;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ByteBufferPool
 {

@@ -16,9 +16,6 @@
 
 package xyz.hexene.localvpn;
 
-import android.util.Log;
-
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;

@@ -42,8 +42,8 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V>
         return false;
     }
 
-    public static interface CleanupCallback<K, V>
+    public interface CleanupCallback<K, V>
     {
-        public void cleanup(Entry<K, V> eldest);
+        void cleanup(Entry<K, V> eldest);
     }
 }
