@@ -6,7 +6,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.Toast;
 
 import java.util.Calendar;
 
@@ -18,13 +17,16 @@ public class AboutActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setDisplayShowHomeEnabled(true);
+
         View aboutPage = new AboutPage(this)
                 .isRTL(false)
                 .setImage(R.drawable.ic_launcher)
                 .setDescription((String) getText(R.string.about_page_description))
                 .addItem(new Element().setTitle("Version 1.0"))
                 .addEmail("julian@sparber.net", getString(R.string.about_contact_us))
-                .addWebsite("http://jsparber.github.io/")
+                .addWebsite("http://jsparber.github.io/", getString(R.string.about_website))
                 .addGitHub("jsparber/vpnMITM", getString(R.string.about_github))
                 .addGroup("Licence:")
                 .addItem(getLicence())
@@ -91,4 +93,11 @@ public class AboutActivity extends AppCompatActivity {
         }
         return el;
     }
+
+    @Override
+    public boolean onSupportNavigateUp() {
+        onBackPressed();
+        return true;
+    }
+
 }

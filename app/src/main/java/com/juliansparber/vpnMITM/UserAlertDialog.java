@@ -30,7 +30,7 @@ public class UserAlertDialog extends Activity {
         int flags = getIntent().getFlags();
         if ((flags & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
             Log.d("TAG", "Launched from history");
-            Intent intent = new Intent(this, startActivity.class);
+            Intent intent = new Intent(this, InterceptorActivity.class);
             startActivity(intent);
             finish();
         } else {
