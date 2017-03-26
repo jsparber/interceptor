@@ -12,6 +12,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -98,9 +99,35 @@ public class BufferServer implements Runnable {
 
         if (!blockTraffic) {
             if (!allowTraffic) {
-                Detector.updateReportMap();
-                HashMap<String, String> connLookup = Collector.provideConnectionLookup();
-                String packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+
+                String packageName = null;
+                for (int i = 0; i < 3 && packageName == null; i++) {
+                    Detector.updateReportMap();
+                    HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+                    packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+
+                    //Maybe we where to fast retry after 100ms
+                    if (packageName == null) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                //Should actually never have to do this some have I don't have the right sourcePort whenn the user does not allow traffic at first connection
+                if (packageName == null ) {
+                    Detector.updateReportMap();
+                    HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+
+                    Set<String> set = connLookup.keySet();
+                    for (String item : set) {
+                        if (item.contains(originalHost + ":" + originalPort)) {
+                            packageName = connLookup.get(item);
+                            break;
+                        }
+                    }
+                }
 
                 //Create a ssl socket and try to perform handshake
                 try {
