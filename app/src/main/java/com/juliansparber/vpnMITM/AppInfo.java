@@ -5,7 +5,7 @@ import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 
-import xyz.hexene.localvpn.LocalVPN;
+import org.secuso.privacyfriendlynetmonitor.Assistant.RunStore;
 
 
 /**
@@ -19,7 +19,7 @@ public class AppInfo {
     public String label;
 
     public AppInfo(String pkg) {
-        final PackageManager pm = LocalVPN.getAppContext().getPackageManager();
+        final PackageManager pm = RunStore.getAppContext().getPackageManager();
         ApplicationInfo appInfo = null;
         try {
             appInfo = pm.getApplicationInfo(pkg, PackageManager.GET_META_DATA);

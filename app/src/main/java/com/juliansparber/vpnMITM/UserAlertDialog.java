@@ -10,9 +10,6 @@ import android.view.ViewGroup;
 
 import java.util.ArrayList;
 
-import xyz.hexene.localvpn.LocalVPN;
-
-
 
 public class UserAlertDialog extends Activity {
     public static final String PAYLOAD = "payload";
@@ -33,7 +30,7 @@ public class UserAlertDialog extends Activity {
         int flags = getIntent().getFlags();
         if ((flags & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0) {
             Log.d("TAG", "Launched from history");
-            Intent intent = new Intent(this, LocalVPN.class);
+            Intent intent = new Intent(this, startActivity.class);
             startActivity(intent);
             finish();
         } else {
@@ -49,7 +46,7 @@ public class UserAlertDialog extends Activity {
         super.onStop();
         if (currentAlert != null) {
             currentAlert.dismiss();
-            closeUserAlertDialog();
+            //closeUserAlertDialog(null);
         }
     }
 
@@ -69,18 +66,18 @@ public class UserAlertDialog extends Activity {
                 .setPositiveButton(R.string.permanentAllow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         SharedProxyInfo.putAllowedConnections(payload[3], true);
-                        closeUserAlertDialog();
+                        closeUserAlertDialog(payload);
                     }
                 })
                 .setNeutralButton(R.string.notNow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        closeUserAlertDialog();
+                        closeUserAlertDialog(payload);
                     }
                 })
                 .setNegativeButton(R.string.permanentDisallow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         SharedProxyInfo.putAllowedConnections(payload[3], false);
-                        closeUserAlertDialog();
+                        closeUserAlertDialog(payload);
                     }
                 })
                 .setIcon(new AppInfo(payload[2]).icon)
@@ -88,13 +85,12 @@ public class UserAlertDialog extends Activity {
         currentAlert.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                closeUserAlertDialog();
+                closeUserAlertDialog(payload);
             }
         });
     }
 
-
-    private void closeUserAlertDialog() {
+    private void closeUserAlertDialog(String[] currentPayload) {
         currentAlert = null;
         if (!intentCache.isEmpty()) {
             final String[] payload = intentCache.get(0).getStringArrayExtra(PAYLOAD);
@@ -104,6 +100,7 @@ public class UserAlertDialog extends Activity {
             intentCache.remove(0);
         }
         else {
+            //should never finish the activity
             this.finish();
             //moveTaskToBack(true);
             this.overridePendingTransition(0, 0);

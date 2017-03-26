@@ -26,6 +26,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import com.juliansparber.vpnMITM.BufferServer;
+import com.juliansparber.vpnMITM.Messenger;
 import com.juliansparber.vpnMITM.R;
 
 import java.io.Closeable;
@@ -99,7 +100,8 @@ public class LocalVPNService extends VpnService {
                     deviceToNetworkUDPQueue, deviceToNetworkTCPQueue, networkToDeviceQueue));
             //executorService.submit(new VPNOutput(vpnInterface.getFileDescriptor(), networkToDeviceQueue));
             //executorService.submit(new VPNInput(vpnInterface.getFileDescriptor(), deviceToNetworkUDPQueue, deviceToNetworkTCPQueue));
-            LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(BROADCAST_VPN_STATE).putExtra("running", true));
+            //LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(BROADCAST_VPN_STATE).putExtra("running", true));
+            Messenger.updateVpnStatus("running");
             Log.i(TAG, "Started");
         } catch (IOException e) {
             // TODO: Here and elsewhere, we should explicitly notify the user of any errors
@@ -226,7 +228,8 @@ public class LocalVPNService extends VpnService {
         isRunning = false;
         executorService.shutdownNow();
         cleanup();
-        LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(BROADCAST_VPN_STATE).putExtra("stopped", true));
+        //LocalBroadcastManager.getInstance(this).sendBroadcast(new Intent(BROADCAST_VPN_STATE).putExtra("stopped", true));
+        Messenger.updateVpnStatus("stopped");
         Log.i(TAG, "Stopped");
     }
 

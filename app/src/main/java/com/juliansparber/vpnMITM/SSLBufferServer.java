@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.AssetManager;
 import android.util.Log;
 
+import org.secuso.privacyfriendlynetmonitor.Assistant.RunStore;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -20,10 +22,7 @@ import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 
-import xyz.hexene.localvpn.LocalVPN;
 import xyz.hexene.localvpn.LocalVPNService;
-
-import static com.juliansparber.vpnMITM.BufferServer.sendLog;
 
 public class SSLBufferServer implements Runnable {
 
@@ -143,7 +142,7 @@ public class SSLBufferServer implements Runnable {
             serverSocket = new Socket(destHost, destPort);
             vpnService.protect(serverSocket);
 
-            clientSocket = createSSLSocket(LocalVPN.getAppContext(), clientSocket);
+            clientSocket = createSSLSocket(RunStore.getAppContext(), clientSocket);
 
             SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
             serverSocket = factory.createSocket(serverSocket, destHost, destPort, false);
@@ -157,7 +156,6 @@ public class SSLBufferServer implements Runnable {
 
         } catch (SSLHandshakeException e) {
             String[] msg = Arrays.copyOf(examinateSSLHandshakeError(e, app), 4);
-            sendLog(msg[0] + ": " + msg[1]);
             msg[2] = packageName;
             msg[3] = destHost + ":" + destPort;
             Messenger.showAlert(msg);
@@ -170,8 +168,6 @@ public class SSLBufferServer implements Runnable {
         if (!sslHandshakeError) {
             //Alert the user that there was no handshake error
             String[] msg = Arrays.copyOf(examinateSSLHandshakeError(null, app), 4);
-
-            sendLog(msg[0] + ": " + msg[1]);
             msg[2] = packageName;
             msg[3] = destHost + ":" + destPort;
             Messenger.showAlert(msg);

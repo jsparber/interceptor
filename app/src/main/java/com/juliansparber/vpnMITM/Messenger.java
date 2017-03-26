@@ -17,6 +17,7 @@ public class Messenger {
     public static final int WARNING_DIALOG = 1;
     public static final int ALERT_DIALOG = 2;
     public static final int ACTION = 3;
+    public static final int VPN_STATUS = 4;
 
     public Messenger(Handler handler) {
         mHandler = handler;
@@ -31,9 +32,12 @@ public class Messenger {
         if (mHandler != null) {
             Message msg = Message.obtain();
             msg.what = LOG_TEXT;
-            msg.obj = stringToSend + "\n";
-            outputLog += msg.obj;
+            outputLog += (stringToSend +"\n");
+            msg.obj = outputLog;
             mHandler.sendMessage(msg);
+        }
+        if (outputLog.length() > 1000) {
+            outputLog = "";
         }
     }
 
@@ -44,11 +48,25 @@ public class Messenger {
             msg.obj = payload;
             mHandler.sendMessage(msg);
 
+            println(payload[1]);
+        }
+    }
+
+    public static void updateVpnStatus(String status) {
+        if (mHandler != null) {
+            Message msg = Message.obtain();
+            msg.what = VPN_STATUS;
+            msg.obj = status;
+            mHandler.sendMessage(msg);
         }
     }
 
     public static void clear() {
         outputLog = "";
+    }
+
+    public static String getOutputLog() {
+        return outputLog;
     }
 
     public static void doAction(String action) {
