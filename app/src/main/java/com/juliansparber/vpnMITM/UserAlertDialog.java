@@ -44,10 +44,11 @@ public class UserAlertDialog extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
-        if (currentAlert != null) {
+        /*if (currentAlert != null) {
             currentAlert.dismiss();
             //closeUserAlertDialog(null);
         }
+        */
     }
 
     @Override
@@ -66,18 +67,18 @@ public class UserAlertDialog extends Activity {
                 .setPositiveButton(R.string.permanentAllow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         SharedProxyInfo.putAllowedConnections(payload[3], true);
-                        closeUserAlertDialog(payload);
+                        closeUserAlertDialog(payload, true);
                     }
                 })
                 .setNeutralButton(R.string.notNow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        closeUserAlertDialog(payload);
+                        closeUserAlertDialog(payload, true);
                     }
                 })
                 .setNegativeButton(R.string.permanentDisallow, new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         SharedProxyInfo.putAllowedConnections(payload[3], false);
-                        closeUserAlertDialog(payload);
+                        closeUserAlertDialog(payload, true);
                     }
                 })
                 .setIcon(new AppInfo(payload[2]).icon)
@@ -85,25 +86,25 @@ public class UserAlertDialog extends Activity {
         currentAlert.setOnDismissListener(new DialogInterface.OnDismissListener() {
             @Override
             public void onDismiss(DialogInterface dialog) {
-                closeUserAlertDialog(payload);
+                closeUserAlertDialog(payload, false);
             }
         });
     }
 
-    private void closeUserAlertDialog(String[] currentPayload) {
-        currentAlert = null;
+    private void closeUserAlertDialog(String[] currentPayload, boolean removeAnimation) {
         if (!intentCache.isEmpty()) {
             final String[] payload = intentCache.get(0).getStringArrayExtra(PAYLOAD);
+            intentCache.remove(0);
             if (payload.length > 3) {
                 creareAlert(payload);
             }
-            intentCache.remove(0);
         }
         else {
             //should never finish the activity
             this.finish();
-            //moveTaskToBack(true);
-            this.overridePendingTransition(0, 0);
+            if (removeAnimation) {
+                this.overridePendingTransition(0,0);
+            }
         }
     }
 }

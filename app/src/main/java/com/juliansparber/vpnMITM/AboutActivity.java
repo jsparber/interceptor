@@ -28,7 +28,7 @@ public class AboutActivity extends AppCompatActivity {
                 .addEmail("julian@sparber.net", getString(R.string.about_contact_us))
                 .addWebsite("http://jsparber.github.io/", getString(R.string.about_website))
                 .addGitHub("jsparber/vpnMITM", getString(R.string.about_github))
-                .addGroup("Licence:")
+                .addGroup("License:")
                 .addItem(getLicence())
                 .addGroup("External Code and Libraries:")
                 .addItem(externalLibs(0))
