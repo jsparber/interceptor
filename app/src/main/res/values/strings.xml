@@ -13,7 +13,7 @@
     <string name="no">No</string>
     <string name="permanentDisallow">Never</string>
     <string name="permanentAllow">Allow</string>
-    <string name="notNow">later</string>
+    <string name="notNow">Later</string>
     <string name="title_activity_start">startActivity</string>
     <string name="title_activity_settings">Settings</string>
     <string name="about_page_description">Interceptor is a simple app to intercept traffic on your android phone. It validates other apps by injecting an invalid ssl certificate and then informs you about the security level of a connection.</string>

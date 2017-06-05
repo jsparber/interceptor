@@ -86,7 +86,7 @@ public class InterceptorActivity extends AppCompatActivity {
         updateLog(Messenger.getOutputLog());
     }
 
-    private void startInterceptor() {
+    public void startInterceptor() {
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent != null)
             startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
@@ -94,7 +94,7 @@ public class InterceptorActivity extends AppCompatActivity {
             onActivityResult(VPN_REQUEST_CODE, RESULT_OK, null);
     }
 
-    private void stopInterceptor() {
+    public void stopInterceptor() {
         if (LocalVPNService.isRunning()) {
             Intent stopIntent = new Intent(this, LocalVPNService.class);
             stopIntent.putExtra("cmd", "stop");
@@ -120,7 +120,7 @@ public class InterceptorActivity extends AppCompatActivity {
     }
 
     //Show warning msg to user
-    private void showWarningToUser (Message msg) {
+    public void showWarningToUser (Message msg) {
         Intent intent = new Intent(this, UserAlertDialog.class);
         intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT | Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NEW_DOCUMENT);
         intent.putExtra(UserAlertDialog.PAYLOAD, (String [])msg.obj);

@@ -44,11 +44,13 @@ public class UserAlertDialog extends Activity {
     @Override
     protected void onStop() {
         super.onStop();
-        /*if (currentAlert != null) {
+        if (currentAlert != null) {
             currentAlert.dismiss();
+            if (!intentCache.isEmpty())
+                intentCache.remove(0);
             //closeUserAlertDialog(null);
         }
-        */
+        finish();
     }
 
     @Override

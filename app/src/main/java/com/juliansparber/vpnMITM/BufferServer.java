@@ -78,6 +78,9 @@ public class BufferServer implements Runnable {
         Socket serverSocket = null;
         Boolean allowTraffic = false;
         Boolean blockTraffic = false;
+        String originalHost = null;
+        int originalPort = 0;
+        int sourcePort = 0;
 
         outputClient = clientSocket.getOutputStream();
         inputClient = clientSocket.getInputStream();
@@ -88,14 +91,23 @@ public class BufferServer implements Runnable {
         final byte[] buffer = new byte[100];
         len = inputClient.read(buffer);
 
-        String[] ipAndPort = SharedProxyInfo.getPortRedirection(clientSocket.getPort()).split(":");
-        String originalHost = ipAndPort[0];
-        int originalPort = Integer.parseInt(ipAndPort[1]);
-        int sourcePort = Integer.parseInt(ipAndPort[3]);
-        if (SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null) {
-            allowTraffic = SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
-            blockTraffic = !SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
+        try {
+            String[] ipAndPort = SharedProxyInfo.getPortRedirection(clientSocket.getPort()).split(":");
+            originalHost = ipAndPort[0];
+            originalPort = Integer.parseInt(ipAndPort[1]);
+            sourcePort = Integer.parseInt(ipAndPort[3]);
+
+            if (SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort) != null) {
+                allowTraffic = SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
+                blockTraffic = !SharedProxyInfo.getAllowedConnections(originalHost + ":" + originalPort);
+            }
+
         }
+        catch (NullPointerException e) {
+            //block all traffic which has no original destination
+            blockTraffic = true;
+        }
+
 
         if (!blockTraffic) {
             if (!allowTraffic) {
@@ -103,8 +115,12 @@ public class BufferServer implements Runnable {
                 String packageName = null;
                 for (int i = 0; i < 3 && packageName == null; i++) {
                     Detector.updateReportMap();
-                    HashMap<String, String> connLookup = Collector.provideConnectionLookup();
-                    packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+                    try {
+                        HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+                        packageName = connLookup.get(originalHost + ":" + originalPort + ":" + sourcePort);
+                    } catch (NullPointerException e) {
+
+                    }
 
                     //Maybe we where to fast retry after 100ms
                     if (packageName == null) {
@@ -115,17 +131,20 @@ public class BufferServer implements Runnable {
                         }
                     }
                 }
-                //Should actually never have to do this some have I don't have the right sourcePort whenn the user does not allow traffic at first connection
+                //Should actually never have to do this some have I don't have the right sourcePort when the user does not allow traffic at first connection
                 if (packageName == null ) {
                     Detector.updateReportMap();
-                    HashMap<String, String> connLookup = Collector.provideConnectionLookup();
+                    try {
+                        HashMap<String, String> connLookup = Collector.provideConnectionLookup();
 
-                    Set<String> set = connLookup.keySet();
-                    for (String item : set) {
-                        if (item.contains(originalHost + ":" + originalPort)) {
-                            packageName = connLookup.get(item);
-                            break;
+                        Set<String> set = connLookup.keySet();
+                        for (String item : set) {
+                            if (item.contains(originalHost + ":" + originalPort)) {
+                                packageName = connLookup.get(item);
+                                break;
+                            }
                         }
+                    } catch (NullPointerException e) {
                     }
                 }
 
